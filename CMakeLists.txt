@@ -14,3 +14,5 @@ add_executable(main_CESS.out main_CESS.cpp ${SOURCE_FILES})
 target_link_libraries(main_CESS.out PRIVATE OpenMP::OpenMP_CXX)
 
 add_executable(test_Norm test_Norm.cpp Norm.hpp)
+
+add_executable(test_Game test_Game.cpp Game.hpp Norm.hpp)
