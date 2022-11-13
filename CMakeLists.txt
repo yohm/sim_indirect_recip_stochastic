@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD 14)
 #set(CMAKE_VERBOSE_MAKEFILE 1)
 
 find_package(OpenMP REQUIRED)
-include_directories(${CMAKE_SOURCE_DIR}/icecream)
+include_directories(${CMAKE_SOURCE_DIR}/icecream-cpp)
 
 set(SOURCE_FILES Norm.hpp Game.hpp)
 
