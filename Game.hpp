@@ -76,6 +76,28 @@ public:
       return h_star;
     }
   }
+
+  double MutantEqReputation(const ActionRule& mut) const {
+    // H^{\ast} =
+    //   h^{\ast} [ R_1(B,G,P') + R_2(G,B,P) ] + (1-h^{\ast}) [ R_1(B,B,P') + R_2(B,B,P)
+    //   / { 2 - h^{\ast} [R_1(G,G,P') + R_2(G,G,P) - R_1(B,G,P') - R_2(G,B,P) ] - (1-h^{\ast}) [ R_1(G,B,P') + R_2(B,G,P) - R_1(B,B,P') - R_2(B,B,P)] }.
+    using Reputation::B, Reputation::G, Action::C, Action::D;
+    const ActionRule Pmut = mut.RescaleWithError(mu_e);
+
+    double r1_BBPmut = Pmut.CProb(B, B) * r_norm.GProbDonor(B, B, C) + (1.0 - Pmut.CProb(B, B)) * r_norm.GProbDonor(B, B, D);
+    double r1_BGPmut = Pmut.CProb(B, G) * r_norm.GProbDonor(B, G, C) + (1.0 - Pmut.CProb(B, G)) * r_norm.GProbDonor(B, G, D);
+    double r1_GBPmut = Pmut.CProb(G, B) * r_norm.GProbDonor(G, B, C) + (1.0 - Pmut.CProb(G, B)) * r_norm.GProbDonor(G, B, D);
+    double r1_GGPmut = Pmut.CProb(G, G) * r_norm.GProbDonor(G, G, C) + (1.0 - Pmut.CProb(G, G)) * r_norm.GProbDonor(G, G, D);
+
+    double r2_BBPres = r_norm.CProb(B, B) * r_norm.GProbRecip(B, B, C) + (1.0 - r_norm.CProb(B, B)) * r_norm.GProbRecip(B, B, D);
+    double r2_BGPres = r_norm.CProb(B, G) * r_norm.GProbRecip(B, G, C) + (1.0 - r_norm.CProb(B, G)) * r_norm.GProbRecip(B, G, D);
+    double r2_GBPres = r_norm.CProb(G, B) * r_norm.GProbRecip(G, B, C) + (1.0 - r_norm.CProb(G, B)) * r_norm.GProbRecip(G, B, D);
+    double r2_GGPres = r_norm.CProb(G, G) * r_norm.GProbRecip(G, G, C) + (1.0 - r_norm.CProb(G, G)) * r_norm.GProbRecip(G, G, D);
+
+    double num = h_star * (r1_BGPmut + r2_GBPres) + (1.0 - h_star) * (r1_BBPmut + r2_BBPres);
+    double den = 2.0 - h_star * (r1_GGPmut + r2_GGPres - r1_BGPmut - r2_GBPres) - (1.0 - h_star) * (r1_GBPmut + r2_BGPres - r1_BBPmut - r2_BBPres);
+    return num / den;
+  }
 };
 
 #endif

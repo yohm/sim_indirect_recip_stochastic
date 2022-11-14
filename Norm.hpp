@@ -87,6 +87,14 @@ class ActionRule {
     return ss.str();
   }
 
+  ActionRule RescaleWithError(double mu_e) const {
+    std::array<double,4> rescaled = {0.0};
+    for (size_t i = 0; i < 4; i++) {
+      rescaled[i] = (1.0 - mu_e) * coop_probs[i];
+    }
+    return ActionRule{rescaled};
+  }
+
   bool IsSecondOrder() const {
     if (coop_probs[0] == coop_probs[2] && coop_probs[1] == coop_probs[3]) { return true; }
     else { return false; }
@@ -225,7 +233,10 @@ class AssessmentRule {
     return AssessmentRule::MakeDeterministicRule(0b00000000);
   }
   static AssessmentRule ImageScoring() {
-    return AssessmentRule::MakeDeterministicRule(0b10101010);
+    return AssessmentRule{{0,1,0,1,0,1,0,1}};
+  }
+  static AssessmentRule KeepRecipient() {
+    return AssessmentRule{{0,0,1,1,0,0,1,1}};
   }
 };
 
@@ -276,7 +287,7 @@ class Norm {
       double gd_prob_c = Rd.GProb(X, Y, Action::C);
       double gr_prob_d = Rr.GProb(X, Y, Action::D);
       double gr_prob_c = Rr.GProb(X, Y, Action::C);
-      ss << std::setprecision(2) << std::fixed;
+      ss << std::setprecision(3) << std::fixed;
       ss << "(" << X << "->" << Y << "): "
           << "c_prob:" << c_prob << " : "
           << "donor_gprob (c:" << gd_prob_c << ",d:" << gd_prob_d << ") : "
@@ -297,17 +308,13 @@ class Norm {
     return Rr.IsDeterministic() && Rr.ID() == 0b11001100;
   }
   Norm RescaleWithError(double mu_e, double mu_a_donor, double mu_a_recip) const { // return the norm that takes into account error probabilities
-    std::array<double,4> coop_probs = {0.0};
-    for (size_t i = 0; i < 4; i++) {
-      coop_probs[i] = (1.0 - mu_e) * P.coop_probs[i];
-    }
     std::array<double,8> good_probs_donor = {0.0};
     std::array<double,8> good_probs_recip = {0.0};
     for (size_t i = 0; i < 8; i++) {
       good_probs_donor[i] = (1.0 - 2.0 * mu_a_donor) * Rd.good_probs[i] + mu_a_donor;
       good_probs_recip[i] = (1.0 - 2.0 * mu_a_recip) * Rr.good_probs[i] + mu_a_recip;
     }
-    return Norm{ {good_probs_donor}, {good_probs_recip}, {coop_probs} };
+    return Norm{ {good_probs_donor}, {good_probs_recip}, P.RescaleWithError(mu_e) };
   }
   int ID() const {
     if (!IsDeterministic()) { return -1; }
@@ -330,44 +337,49 @@ class Norm {
   }
   static Norm AllC() { return Norm(AssessmentRule{{1,1,1,1,1,1,1,1}}, AssessmentRule{{1,1,1,1,1,1,1,1}}, ActionRule{{1,1,1,1}}); }
   static Norm AllD() { return Norm(AssessmentRule{{0,0,0,0,0,0,0,0}}, AssessmentRule{{0,0,0,0,0,0,0,0}}, ActionRule{{0,0,0,0}}); }
+  static Norm ImageScoring() {
+    return Norm( AssessmentRule::ImageScoring(),
+                 AssessmentRule::KeepRecipient(),
+                 ActionRule::DISC() );
+  }
   static Norm L1() {
     return Norm({{0,1,0,1,1,1,0,1}},
-                {{0,0,1,1,0,0,1,1}},
+                AssessmentRule::KeepRecipient(),
                 {{1,1,0,1}});
   }
   static Norm L2() {
     return Norm({{0,1,0,1,1,0,0,1}},
-                {{0,0,1,1,0,0,1,1}},
+                AssessmentRule::KeepRecipient(),
                 {{1,1,0,1}});
   }
   static Norm L3() {
     return Norm({{1,1,0,1,1,1,0,1}},
-                {{0,0,1,1,0,0,1,1}},
+                AssessmentRule::KeepRecipient(),
                 {{0,1,0,1}});
   }
   static Norm L4() {
     return Norm({{1,0,0,1,1,1,0,1}},
-                {{0,0,1,1,0,0,1,1}},
+                AssessmentRule::KeepRecipient(),
                 {{0,1,0,1}});
   }
   static Norm L5() {
     return Norm({{1,1,0,1,1,0,0,1}},
-                {{0,0,1,1,0,0,1,1}},
+                AssessmentRule::KeepRecipient(),
                 {{0,1,0,1}});
   }
   static Norm L6() {
     return Norm({{1,0,0,1,1,0,0,1}},
-                {{0,0,1,1,0,0,1,1}},
+                AssessmentRule::KeepRecipient(),
                 {{0,1,0,1}});
   }
   static Norm L7() {
     return Norm({{0,0,0,1,1,1,0,1}},
-                {{0,0,1,1,0,0,1,1}},
+                AssessmentRule::KeepRecipient(),
                 {{0,1,0,1}});
   }
   static Norm L8() {
     return Norm({{0,0,0,1,1,0,0,1}},
-                {{0,0,1,1,0,0,1,1}},
+                AssessmentRule::KeepRecipient(),
                 {{0,1,0,1}});
   }
 };

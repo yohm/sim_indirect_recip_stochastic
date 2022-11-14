@@ -5,13 +5,17 @@
 
 
 template <typename T>
-bool IsAllClose(T a, T b, double epsilon = 0.0001) {
+bool IsAllClose(T a, T b, double epsilon = 1.0e-6) {
   for (size_t i = 0; i < a.size(); i++) {
     if (std::abs(a[i] - b[i]) > epsilon) {
       return false;
     }
   }
   return true;
+}
+
+bool IsClose(double a, double b, double epsilon = 1.0e-6) {
+  return std::abs(a - b) < epsilon;
 }
 
 void test_Game() {
@@ -21,9 +25,29 @@ void test_Game() {
     Game g(mu_e, mu_a_donor, mu_a_recip, n);
     std::cerr << g.r_norm.Inspect();
     IC(g.h_star, g.pc_res_res);
-    assert( g.h_star > 0.99 );
-    assert( g.pc_res_res > 0.99 );
+    assert( g.h_star > 0.97 );
+    assert( g.pc_res_res > 0.96 );
+
+    ActionRule alld = ActionRule::ALLD();
+    double H_alld = g.MutantEqReputation(alld);
+    ActionRule allc = ActionRule::ALLC();
+    double H_allc = g.MutantEqReputation(allc);
+    IC(H_alld, H_allc);
+    assert( H_alld < 0.01 );
+    assert( H_allc > 0.99 );
   }
+
+  {
+    Norm is = Norm::ImageScoring();
+    Game g(mu_e, mu_a_donor, mu_a_recip, is);
+    std::cerr << "IS: " << g.r_norm.Inspect();
+    IC(g.h_star, g.pc_res_res);
+    bool h = IsClose(g.h_star, 0.40, 0.01 );
+    bool pc = IsClose( g.pc_res_res, 0.40, 0.01 );
+    assert( h && pc );
+  }
+
+  std::cout << "test_Game passed!" << std::endl;
 }
 
 

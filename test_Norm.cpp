@@ -1,5 +1,6 @@
 #include <iostream>
 #include <cassert>
+#include <icecream.hpp>
 #include "Norm.hpp"
 
 
@@ -105,6 +106,16 @@ void test_Norm() {
   assert( n.CProb(Reputation::B, Reputation::G) == 0.25 );
   std::cout << n.Inspect();
 
+  // test Image Scoring
+  {
+    Norm is = Norm::ImageScoring();
+    assert( is.IsRecipKeep() );
+    assert( is.IsDeterministic() );
+    assert( is.IsSecondOrder() );
+    assert( is.ID() == 0b1010'10101010'11001100 );
+  }
+
+  // test leading eight
   std::array<Norm,8> leading_eight = {Norm::L1(), Norm::L2(), Norm::L3(), Norm::L4(),
                                       Norm::L5(), Norm::L6(), Norm::L7(), Norm::L8()};
   std::array<int,8> l8_ids = {768716, 760524, 703436, 702924, 695244, 694732, 702668, 694476};
