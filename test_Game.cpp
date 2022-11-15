@@ -30,11 +30,21 @@ void test_Game() {
 
     ActionRule alld = ActionRule::ALLD();
     double H_alld = g.MutantEqReputation(alld);
+    auto pcs_alld = g.MutantCooperationProbs(alld);
+    IC(H_alld, pcs_alld);
     ActionRule allc = ActionRule::ALLC();
     double H_allc = g.MutantEqReputation(allc);
-    IC(H_alld, H_allc);
+    auto pcs_allc = g.MutantCooperationProbs(allc);
+    IC(H_allc, pcs_allc);
     assert( H_alld < 0.01 );
     assert( H_allc > 0.99 );
+
+    auto br_alld = g.ESSBenefitRange(alld);
+    auto br_allc = g.ESSBenefitRange(allc);
+    IC(br_alld, br_allc);
+
+    auto br = g.ESSBenefitRange();
+    IC(br);
   }
 
   {
@@ -45,6 +55,15 @@ void test_Game() {
     bool h = IsClose(g.h_star, 0.40, 0.01 );
     bool pc = IsClose( g.pc_res_res, 0.40, 0.01 );
     assert( h && pc );
+
+    ActionRule alld = ActionRule::ALLD();
+    ActionRule allc = ActionRule::ALLC();
+    auto br_alld = g.ESSBenefitRange(alld);
+    auto br_allc = g.ESSBenefitRange(allc);
+    IC(br_alld, br_allc);
+
+    auto br = g.ESSBenefitRange();
+    IC(br);
   }
 
   std::cout << "test_Game passed!" << std::endl;

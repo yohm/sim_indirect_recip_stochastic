@@ -77,6 +77,74 @@ public:
     }
   }
 
+  std::array<double,2> ESSBenefitRange() const {  // range of b for which the norm is ESS against possible mutants
+    double b_lower_bound = 1.0;
+    double b_upper_bound = std::numeric_limits<double>::max();
+    for (int id = 0; id < 16; id++) {
+      if (norm.P.ID() == id) continue;
+      ActionRule mut = ActionRule::MakeDeterministicRule(id);
+      auto b_range = ESSBenefitRange(mut);
+      if (b_range[0] > b_lower_bound) b_lower_bound = b_range[0];
+      if (b_range[1] < b_upper_bound) b_upper_bound = b_range[1];
+    }
+    return {b_lower_bound, b_upper_bound};
+  }
+
+  std::array<double,2> ESSBenefitRange(const ActionRule& mut) const {
+    double b_lower_bound = 1.0;
+    double b_upper_bound = std::numeric_limits<double>::max();
+
+    auto p = MutantCooperationProbs(mut);
+    double pc_res_mut = p.first, pc_mut_res = p.second;
+
+    if (pc_res_res > pc_res_mut) {
+      // b/c > { p_c^{\rm res \to mut} - p_c^{\rm mut \to res} / { p_c^{\rm res \to res} - p_c^{\rm res \to mut} }
+      b_lower_bound = (pc_res_mut - pc_mut_res) / (pc_res_res - pc_res_mut);
+      b_upper_bound = std::numeric_limits<double>::max();
+    }
+    else if (pc_res_res < pc_res_mut) {
+      // b/c < { p_c^{\rm res \to mut} - p_c^{\rm mut \to res} / { p_c^{\rm res \to res} - p_c^{\rm res \to mut} }
+      b_upper_bound = (pc_res_mut - pc_mut_res) / (pc_res_res - pc_res_mut);
+      b_lower_bound = 1.0;
+    }
+    else {
+      if (pc_res_mut >= pc_mut_res) {
+        // no ESS
+        b_lower_bound = std::numeric_limits<double>::max();
+        b_upper_bound = 1.0;
+      }
+      else {
+        // ESS for all
+        b_lower_bound = 1.0;
+        b_upper_bound = std::numeric_limits<double>::max();
+      }
+    }
+    return {b_lower_bound, b_upper_bound};
+  }
+
+  double MutantPayoff(const ActionRule& mut, double benefit) const {
+    auto pcs = MutantCooperationProbs(mut);
+    double pc_res_mut = pcs.first;
+    double pc_mut_res = pcs.second;
+    double pi_mut = pc_res_mut * benefit - pc_mut_res * 1.0;
+    return pi_mut;
+  }
+
+  std::pair<double,double> MutantCooperationProbs(const ActionRule& mut) const {
+    using Reputation::B, Reputation::G, Action::C, Action::D;
+    double H_star = MutantEqReputation(mut);
+    const ActionRule Pmut = mut.RescaleWithError(mu_e);
+    double pc_res_mut = h_star * H_star * r_norm.CProb(G, G)
+        + h_star * (1.0-H_star) * r_norm.CProb(G, B)
+        + (1.0-h_star) * H_star * r_norm.CProb(B, G)
+        + (1.0-h_star) * (1.0-H_star) * r_norm.CProb(B, B);
+    double pc_mut_res = H_star * h_star * Pmut.CProb(G, G)
+        + H_star * (1.0-h_star) * Pmut.CProb(G, B)
+        + (1.0-H_star) * h_star * Pmut.CProb(B, G)
+        + (1.0-H_star) * (1.0-h_star) * Pmut.CProb(B, B);
+    return std::make_pair(pc_res_mut, pc_mut_res);
+  }
+
   double MutantEqReputation(const ActionRule& mut) const {
     // H^{\ast} =
     //   h^{\ast} [ R_1(B,G,P') + R_2(G,B,P) ] + (1-h^{\ast}) [ R_1(B,B,P') + R_2(B,B,P)
