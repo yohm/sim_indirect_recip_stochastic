@@ -265,7 +265,7 @@ class Norm {
   std::string Inspect() const {
     std::stringstream ss;
     if (IsDeterministic()) {
-      ss << "Norm: " << ID() << std::endl;
+      ss << "Norm: 0x" << std::hex << ID() << std::endl;
       for (int i = 3; i >= 0; i--) {
         Reputation X = static_cast<Reputation>(i / 2);
         Reputation Y = static_cast<Reputation>(i % 2);
@@ -298,6 +298,9 @@ class Norm {
   double CProb(Reputation donor, Reputation recipient) const { return P.CProb(donor, recipient); }
   double GProbDonor(Reputation donor, Reputation recipient, Action act) const { return Rd.GProb(donor, recipient, act); }
   double GProbRecip(Reputation donor, Reputation recipient, Action act) const { return Rr.GProb(donor, recipient, act); }
+  Norm SwapGB() const {
+    return Norm(Rd.SwapGB(), Rr.SwapGB(), P.SwapGB());
+  }
   bool IsSecondOrder() const {
     return P.IsSecondOrder() && Rd.IsSecondOrder() && Rr.IsSecondOrder();
   }
@@ -319,18 +322,18 @@ class Norm {
   int ID() const {
     if (!IsDeterministic()) { return -1; }
     int id = 0;
-    id += P.ID() << 16;
-    id += Rd.ID() << 8;
-    id += Rr.ID();
+    id += Rd.ID() << 12;
+    id += Rr.ID() << 4;
+    id += P.ID();
     return id;
   }
   static Norm ConstructFromID(int id) {
     if (id < 0 || id >= (1<<20)) {
       throw std::runtime_error("Norm: id must be between 0 and 2^20-1");
     }
-    int P_id = (id >> 16) & 0xF;
-    int Rd_id = (id >> 8) & 0xFF;
-    int Rr_id = id & 0xFF;
+    int Rd_id = (id >> 12) & 0xFF;
+    int Rr_id = (id >> 4) & 0xFF;
+    int P_id = id & 0xF;
     return Norm(AssessmentRule::MakeDeterministicRule(Rd_id),
                 AssessmentRule::MakeDeterministicRule(Rr_id),
                 ActionRule::MakeDeterministicRule(P_id));

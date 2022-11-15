@@ -1,6 +1,7 @@
 #include <iostream>
 #include <cassert>
 #include <icecream.hpp>
+#include <bitset>
 #include "Norm.hpp"
 
 
@@ -112,13 +113,15 @@ void test_Norm() {
     assert( is.IsRecipKeep() );
     assert( is.IsDeterministic() );
     assert( is.IsSecondOrder() );
-    assert( is.ID() == 0b1010'10101010'11001100 );
+    assert( is.ID() == 0b10101010'11001100'1010);
   }
 
   // test leading eight
   std::array<Norm,8> leading_eight = {Norm::L1(), Norm::L2(), Norm::L3(), Norm::L4(),
                                       Norm::L5(), Norm::L6(), Norm::L7(), Norm::L8()};
-  std::array<int,8> l8_ids = {768716, 760524, 703436, 702924, 695244, 694732, 702668, 694476};
+  std::array<int,8> l8_ids = {0b10111010'11001100'1011, 0b10011010'11001100'1011, 0b10111011'11001100'1010, 0b10111001'11001100'1010,
+                              0b10011011'11001100'1010, 0b10011001'11001100'1010, 0b10111000'11001100'1010, 0b10011000'11001100'1010
+                              };
   for (size_t i = 0; i < 8; i++) {
     auto l = leading_eight[i];
     std::cout << "L" << i+1 << " : " << l.Inspect();
@@ -129,8 +132,9 @@ void test_Norm() {
     } else {
       assert( l.IsSecondOrder() == false );
     }
+    // std::cout << std::bitset<20>(l.ID()) << std::endl;
     assert( l.ID() == l8_ids[i] );
-    assert( Norm::ConstructFromID(l8_ids[i]) == l );
+    assert( Norm::ConstructFromID(l.ID()) == l );
 
     assert( l.CProb(Reputation::G, Reputation::G) == 1.0 );
     assert( l.CProb(Reputation::G, Reputation::B) == 0.0 );
