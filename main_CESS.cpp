@@ -10,7 +10,7 @@ bool IsCESS(const Norm& norm, double mu_a_recip = 1.0e-2) {
   Game game(mu_e, mu_a_donor, mu_a_recip, norm);
   auto brange = game.ESSBenefitRange();
   // IC(brange);
-  return (game.pc_res_res > 0.95 && brange[0] < 1.001 && brange[1] > 1000);
+  return (game.pc_res_res > 0.95 && brange[0] < 1.05 && brange[1] > 100);
 }
 
 void FindLeadingEight() {
@@ -56,7 +56,7 @@ void EnumerateAllCESS() {
           continue;
         }
 
-        if (IsCESS(norm, 0.0)) {
+        if (IsCESS(norm)) {
           if (norm.CProb(Reputation::G, Reputation::G) != 1.0) {
             norm = norm.SwapGB();
           }
@@ -91,7 +91,7 @@ void EnumerateR2() {
       AssessmentRule R2 = AssessmentRule::MakeDeterministicRule(k);
       norm.Rr = R2;
 
-      if (IsCESS(norm, 0.0)) {
+      if (IsCESS(norm)) {
         cess_ids.insert(norm.Rr.ID());
         num_passed++;
       }
@@ -108,11 +108,36 @@ void EnumerateR2() {
   IC(num, num_passed, R2_ids.size());
 }
 
+void FindMutant() {
+  Norm norm = Norm::L3();
+  norm.Rr = AssessmentRule::MakeDeterministicRule(0b10001000);
+  norm.Rr.SetGProb(Reputation::G, Reputation::B, Action::D, 1.0);
+
+  const double mu_e = 1.0e-2, mu_a_donor = 1.0e-2, mu_a_recip = 1.0e-2;
+  Game game(mu_e, mu_a_donor, mu_a_recip, norm);
+  auto brange = game.ESSBenefitRange();
+  IC(brange);
+
+  for (int id = 0; id < 16; id++) {
+    if (norm.P.ID() == id) continue;
+    ActionRule mut = ActionRule::MakeDeterministicRule(id);
+    auto b_range = game.ESSBenefitRange(mut);
+    IC(id, b_range);
+  }
+
+  ActionRule alld = ActionRule::ALLD();
+  double h_mut = game.MutantEqReputation(alld);
+  auto probs = game.MutantCooperationProbs(alld);
+  IC(h_mut, probs, game.pc_res_res);
+
+}
+
 int main() {
   // FindLeadingEight();
   EnumerateAllCESS();
-
   // EnumerateR2();
+
+  // FindMutant();
 
   return 0;
 }

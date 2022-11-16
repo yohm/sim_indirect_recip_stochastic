@@ -43,9 +43,13 @@ void test_L8() {
     auto br_alld = g.ESSBenefitRange(alld);
     auto br_allc = g.ESSBenefitRange(allc);
     IC(br_alld, br_allc);
+    assert(br_alld[0] < 1.05);
+    assert(br_allc[1] > 100);
 
     auto br = g.ESSBenefitRange();
     IC(br);
+    assert(br[0] < 1.05);
+    assert(br[1] > 100);
   }
   std::cout << "test_L8 passed!" << std::endl;
 }
