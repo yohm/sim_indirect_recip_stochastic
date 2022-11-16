@@ -98,17 +98,17 @@ public:
     double pc_res_mut = p.first, pc_mut_res = p.second;
 
     if (pc_res_res > pc_res_mut) {
-      // b/c > { p_c^{\rm res \to mut} - p_c^{\rm mut \to res} / { p_c^{\rm res \to res} - p_c^{\rm res \to mut} }
-      b_lower_bound = (pc_res_mut - pc_mut_res) / (pc_res_res - pc_res_mut);
+      // b/c > { p_c^{\rm res \to res} - p_c^{\rm mut \to res} / { p_c^{\rm res \to res} - p_c^{\rm res \to mut} }
+      b_lower_bound = (pc_res_res - pc_mut_res) / (pc_res_res - pc_res_mut);
       b_upper_bound = std::numeric_limits<double>::max();
     }
     else if (pc_res_res < pc_res_mut) {
       // b/c < { p_c^{\rm res \to mut} - p_c^{\rm mut \to res} / { p_c^{\rm res \to res} - p_c^{\rm res \to mut} }
-      b_upper_bound = (pc_res_mut - pc_mut_res) / (pc_res_res - pc_res_mut);
+      b_upper_bound = (pc_res_res - pc_mut_res) / (pc_res_res - pc_res_mut);
       b_lower_bound = 1.0;
     }
     else {
-      if (pc_res_mut >= pc_mut_res) {
+      if (pc_res_res >= pc_mut_res) {
         // no ESS
         b_lower_bound = std::numeric_limits<double>::max();
         b_upper_bound = 1.0;
