@@ -256,32 +256,33 @@ bool operator!=(const AssessmentRule& t1, const AssessmentRule& t2) {
 
 // Norm is a set of AssessmentRule & ActionRule
 class Norm {
-  public:
-  Norm(const AssessmentRule& R_d, const AssessmentRule& R_r, const ActionRule& act)
-  : Rd(R_d.good_probs), Rr(R_r.good_probs), P(act.coop_probs) {};
-  Norm(const Norm& rhs) : Rd(rhs.Rd), Rr(rhs.Rr), P(rhs.P) {};
+public:
+  Norm(const AssessmentRule &R_d, const AssessmentRule &R_r, const ActionRule &act)
+      : Rd(R_d.good_probs), Rr(R_r.good_probs), P(act.coop_probs) {};
+  Norm(const Norm &rhs) : Rd(rhs.Rd), Rr(rhs.Rr), P(rhs.P) {};
   AssessmentRule Rd, Rr;  // assessment rules to assess donor and recipient
   ActionRule P;  // action rule
   std::string Inspect() const {
     std::stringstream ss;
     if (IsDeterministic()) {
-      ss << "Norm: 0x" << std::hex << ID() << std::endl;
+      ss << "Norm: 0x" << std::hex << ID() << " : " << GetName() << std::endl;
       for (int i = 3; i >= 0; i--) {
         Reputation X = static_cast<Reputation>(i / 2);
         Reputation Y = static_cast<Reputation>(i % 2);
-        Action A = (CProb(X,Y) == 1.0) ? Action::C : Action::D;
+        Action A = (CProb(X, Y) == 1.0) ? Action::C : Action::D;
         Action notA = FlipAction(A);
         Reputation donor_rep = Rd.GProb(X, Y, A) == 1.0 ? Reputation::G : Reputation::B;
         Reputation donor_rep_not = Rd.GProb(X, Y, notA) == 1.0 ? Reputation::G : Reputation::B;
         Reputation recip_rep = Rr.GProb(X, Y, A) == 1.0 ? Reputation::G : Reputation::B;
         Reputation recip_rep_not = Rr.GProb(X, Y, notA) == 1.0 ? Reputation::G : Reputation::B;
-        ss << "(" << X << "->" << Y << "):" << A << donor_rep << donor_rep_not << ":" << recip_rep << recip_rep_not << "\t";
+        ss << "(" << X << "->" << Y << "):" << A << donor_rep << donor_rep_not << ":" << recip_rep << recip_rep_not
+           << "\t";
       }
       ss << "\n";
     }
     for (int i = 3; i >= 0; i--) {
-      Reputation X = static_cast<Reputation>(i/2);
-      Reputation Y = static_cast<Reputation>(i%2);
+      Reputation X = static_cast<Reputation>(i / 2);
+      Reputation Y = static_cast<Reputation>(i % 2);
       double c_prob = P.CProb(X, Y);
       double gd_prob_d = Rd.GProb(X, Y, Action::D);
       double gd_prob_c = Rd.GProb(X, Y, Action::C);
@@ -289,15 +290,19 @@ class Norm {
       double gr_prob_c = Rr.GProb(X, Y, Action::C);
       ss << std::setprecision(3) << std::fixed;
       ss << "(" << X << "->" << Y << "): "
-          << "c_prob:" << c_prob << " : "
-          << "donor_gprob (c:" << gd_prob_c << ",d:" << gd_prob_d << ") : "
-          << "recip_gprob (c:" << gr_prob_c << ",d:" << gr_prob_d << ")\n";
+         << "c_prob:" << c_prob << " : "
+         << "donor_gprob (c:" << gd_prob_c << ",d:" << gd_prob_d << ") : "
+         << "recip_gprob (c:" << gr_prob_c << ",d:" << gr_prob_d << ")\n";
     }
     return ss.str();
   }
   double CProb(Reputation donor, Reputation recipient) const { return P.CProb(donor, recipient); }
-  double GProbDonor(Reputation donor, Reputation recipient, Action act) const { return Rd.GProb(donor, recipient, act); }
-  double GProbRecip(Reputation donor, Reputation recipient, Action act) const { return Rr.GProb(donor, recipient, act); }
+  double GProbDonor(Reputation donor, Reputation recipient, Action act) const {
+    return Rd.GProb(donor, recipient, act);
+  }
+  double GProbRecip(Reputation donor, Reputation recipient, Action act) const {
+    return Rr.GProb(donor, recipient, act);
+  }
   Norm SwapGB() const {
     return Norm(Rd.SwapGB(), Rr.SwapGB(), P.SwapGB());
   }
@@ -310,17 +315,21 @@ class Norm {
   bool IsRecipKeep() const { // recipient's reputation is kept
     return Rr.IsDeterministic() && Rr.ID() == 0b11001100;
   }
-  Norm RescaleWithError(double mu_e, double mu_a_donor, double mu_a_recip) const { // return the norm that takes into account error probabilities
-    std::array<double,8> good_probs_donor = {0.0};
-    std::array<double,8> good_probs_recip = {0.0};
+  Norm RescaleWithError(double mu_e,
+                        double mu_a_donor,
+                        double mu_a_recip) const { // return the norm that takes into account error probabilities
+    std::array<double, 8> good_probs_donor = {0.0};
+    std::array<double, 8> good_probs_recip = {0.0};
     for (size_t i = 0; i < 8; i++) {
       good_probs_donor[i] = (1.0 - 2.0 * mu_a_donor) * Rd.good_probs[i] + mu_a_donor;
       good_probs_recip[i] = (1.0 - 2.0 * mu_a_recip) * Rr.good_probs[i] + mu_a_recip;
     }
-    return Norm{ {good_probs_donor}, {good_probs_recip}, P.RescaleWithError(mu_e) };
+    return Norm{{good_probs_donor}, {good_probs_recip}, P.RescaleWithError(mu_e)};
   }
   int ID() const {
-    if (!IsDeterministic()) { return -1; }
+    if (!IsDeterministic()) {
+      return -1;
+    }
     int id = 0;
     id += Rd.ID() << 12;
     id += Rr.ID() << 4;
@@ -328,7 +337,7 @@ class Norm {
     return id;
   }
   static Norm ConstructFromID(int id) {
-    if (id < 0 || id >= (1<<20)) {
+    if (id < 0 || id >= (1 << 20)) {
       throw std::runtime_error("Norm: id must be between 0 and 2^20-1");
     }
     int Rd_id = (id >> 12) & 0xFF;
@@ -338,55 +347,88 @@ class Norm {
                 AssessmentRule::MakeDeterministicRule(Rr_id),
                 ActionRule::MakeDeterministicRule(P_id));
   }
-  static Norm AllC() { return Norm(AssessmentRule{{1,1,1,1,1,1,1,1}}, AssessmentRule{{1,1,1,1,1,1,1,1}}, ActionRule{{1,1,1,1}}); }
-  static Norm AllD() { return Norm(AssessmentRule{{0,0,0,0,0,0,0,0}}, AssessmentRule{{0,0,0,0,0,0,0,0}}, ActionRule{{0,0,0,0}}); }
+  static Norm AllC() {
+    return Norm(AssessmentRule{{1, 1, 1, 1, 1, 1, 1, 1}},
+                AssessmentRule{{1, 1, 1, 1, 1, 1, 1, 1}},
+                ActionRule{{1, 1, 1, 1}});
+  }
+  static Norm AllD() {
+    return Norm(AssessmentRule{{0, 0, 0, 0, 0, 0, 0, 0}},
+                AssessmentRule{{0, 0, 0, 0, 0, 0, 0, 0}},
+                ActionRule{{0, 0, 0, 0}});
+  }
   static Norm ImageScoring() {
-    return Norm( AssessmentRule::ImageScoring(),
-                 AssessmentRule::KeepRecipient(),
-                 ActionRule::DISC() );
+    return Norm(AssessmentRule::ImageScoring(),
+                AssessmentRule::KeepRecipient(),
+                ActionRule::DISC());
   }
   static Norm L1() {
-    return Norm({{0,1,0,1,1,1,0,1}},
+    return Norm({{0, 1, 0, 1, 1, 1, 0, 1}},
                 AssessmentRule::KeepRecipient(),
-                {{1,1,0,1}});
+                {{1, 1, 0, 1}});
   }
   static Norm L2() {
-    return Norm({{0,1,0,1,1,0,0,1}},
+    return Norm({{0, 1, 0, 1, 1, 0, 0, 1}},
                 AssessmentRule::KeepRecipient(),
-                {{1,1,0,1}});
+                {{1, 1, 0, 1}});
   }
   static Norm L3() {
-    return Norm({{1,1,0,1,1,1,0,1}},
+    return Norm({{1, 1, 0, 1, 1, 1, 0, 1}},
                 AssessmentRule::KeepRecipient(),
-                {{0,1,0,1}});
+                {{0, 1, 0, 1}});
   }
   static Norm L4() {
-    return Norm({{1,0,0,1,1,1,0,1}},
+    return Norm({{1, 0, 0, 1, 1, 1, 0, 1}},
                 AssessmentRule::KeepRecipient(),
-                {{0,1,0,1}});
+                {{0, 1, 0, 1}});
   }
   static Norm L5() {
-    return Norm({{1,1,0,1,1,0,0,1}},
+    return Norm({{1, 1, 0, 1, 1, 0, 0, 1}},
                 AssessmentRule::KeepRecipient(),
-                {{0,1,0,1}});
+                {{0, 1, 0, 1}});
   }
   static Norm L6() {
-    return Norm({{1,0,0,1,1,0,0,1}},
+    return Norm({{1, 0, 0, 1, 1, 0, 0, 1}},
                 AssessmentRule::KeepRecipient(),
-                {{0,1,0,1}});
+                {{0, 1, 0, 1}});
   }
   static Norm L7() {
-    return Norm({{0,0,0,1,1,1,0,1}},
+    return Norm({{0, 0, 0, 1, 1, 1, 0, 1}},
                 AssessmentRule::KeepRecipient(),
-                {{0,1,0,1}});
+                {{0, 1, 0, 1}});
   }
   static Norm L8() {
-    return Norm({{0,0,0,1,1,0,0,1}},
+    return Norm({{0, 0, 0, 1, 1, 0, 0, 1}},
                 AssessmentRule::KeepRecipient(),
-                {{0,1,0,1}});
+                {{0, 1, 0, 1}});
+  }
+  static const std::vector<std::pair<int, std::string> > NormNames;
+  std::string GetName() const {
+    if (IsDeterministic()) {
+      int id = ID();
+      for (auto &p : NormNames) {
+        if (p.first == id) {
+          return p.second;
+        }
+      }
+    }
+    return "";
   }
 };
 
+const std::vector<std::pair<int,std::string> > Norm::NormNames = {{
+                                                                    {AllC().ID(), "AllC"},
+                                                                    {AllD().ID(), "AllD"},
+                                                                    {ImageScoring().ID(), "ImageScoring"},
+                                                                    {L1().ID(), "L1"},
+                                                                    {L2().ID(), "L2"},
+                                                                    {L3().ID(), "L3"},
+                                                                    {L4().ID(), "L4"},
+                                                                    {L5().ID(), "L5"},
+                                                                    {L6().ID(), "L6"},
+                                                                    {L7().ID(), "L7"},
+                                                                    {L8().ID(), "L8"}
+                                                                }};
 bool operator==(const Norm& n1, const Norm& n2) {
   return n1.P == n2.P && n1.Rd == n2.Rd && n1.Rr == n2.Rr;
 }

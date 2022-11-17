@@ -119,9 +119,10 @@ void test_Norm() {
   // test leading eight
   std::array<Norm,8> leading_eight = {Norm::L1(), Norm::L2(), Norm::L3(), Norm::L4(),
                                       Norm::L5(), Norm::L6(), Norm::L7(), Norm::L8()};
-  std::array<int,8> l8_ids = {0b10111010'11001100'1011, 0b10011010'11001100'1011, 0b10111011'11001100'1010, 0b10111001'11001100'1010,
-                              0b10011011'11001100'1010, 0b10011001'11001100'1010, 0b10111000'11001100'1010, 0b10011000'11001100'1010
-                              };
+  std::array<int,8> l8_ids =
+      {0b10111010'11001100'1011, 0b10011010'11001100'1011, 0b10111011'11001100'1010, 0b10111001'11001100'1010,
+       0b10011011'11001100'1010, 0b10011001'11001100'1010, 0b10111000'11001100'1010, 0b10011000'11001100'1010
+      };
   for (size_t i = 0; i < 8; i++) {
     auto l = leading_eight[i];
     std::cout << "L" << i+1 << " : " << l.Inspect();
@@ -133,6 +134,7 @@ void test_Norm() {
       assert( l.IsSecondOrder() == false );
     }
     // std::cout << std::bitset<20>(l.ID()) << std::endl;
+    assert( l.GetName() == "L"+std::to_string(i+1) );
     assert( l.ID() == l8_ids[i] );
     assert( Norm::ConstructFromID(l.ID()) == l );
 
