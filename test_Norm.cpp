@@ -146,6 +146,10 @@ void test_Norm() {
     assert( l.GProbDonor(Reputation::B, Reputation::G, Action::D) == 0.0 ); // identification of defectors
     assert( l.GProbDonor(Reputation::G, Reputation::B, Action::D) == 1.0 ); // justified punishment
     assert( l.GProbDonor(Reputation::B, Reputation::G, Action::C) == 1.0 ); // apology
+
+    Norm similar = l;
+    similar.Rr.SetGProb(Reputation::G, Reputation::G, Action::C, 0.5);
+    assert(similar.SimilarNorm() == l.GetName());
   }
 
   // test rescaling

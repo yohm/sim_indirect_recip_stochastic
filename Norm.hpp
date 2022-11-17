@@ -412,6 +412,23 @@ public:
         }
       }
     }
+    std::string s = SimilarNorm();
+    if (!s.empty()) {
+      return "similar to " + s;
+    }
+    return "";
+  }
+  std::string SimilarNorm() const {
+    // return the named norm that differs only in R2
+    if (P.IsDeterministic() && Rd.IsDeterministic()) {
+      int id = (Rd.ID() << 12) + P.ID();
+      constexpr int mask = 0xFF00F;
+      for (auto &p : NormNames) {
+        if ((p.first & mask) == (id & mask)) {
+          return p.second;
+        }
+      }
+    }
     return "";
   }
 };
