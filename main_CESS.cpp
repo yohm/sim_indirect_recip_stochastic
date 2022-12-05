@@ -1,16 +1,18 @@
 #include <iostream>
 #include <vector>
 #include <set>
+#include <map>
 #include "Norm.hpp"
 #include "Game.hpp"
 
 
-bool IsCESS(const Norm& norm, double mu_a_recip = 1.0e-2) {
-  const double mu_e = 1.0e-2, mu_a_donor = 1.0e-2;
+std::pair<bool,std::array<double,2>> CheckCESS(const Norm& norm, double mu_a_recip = 1.0e-3) {
+  const double mu_e = 1.0e-3, mu_a_donor = 1.0e-3;
   Game game(mu_e, mu_a_donor, mu_a_recip, norm);
   auto brange = game.ESSBenefitRange();
+  bool isCESS = game.pc_res_res > 0.98 && brange[0] < 1.05 && brange[1] > 100;
   // IC(brange);
-  return (game.pc_res_res > 0.95 && brange[0] < 1.05 && brange[1] > 100);
+  return {isCESS, brange};
 }
 
 void FindLeadingEight() {
@@ -27,11 +29,13 @@ void FindLeadingEight() {
         continue;
       }
 
-      if (IsCESS(norm, 0.0)) {
+      auto [isCESS, brange] = CheckCESS(norm, 0.0);
+      if (isCESS) {
         if (norm.CProb(Reputation::G, Reputation::G) != 1.0) {
           norm = norm.SwapGB();
         }
         std::cerr << norm.Inspect();
+        std::cerr << "brange: "  << brange[0] << " " << brange[1] << std::endl;
         num_passed++;
       }
       num++;
@@ -42,7 +46,7 @@ void FindLeadingEight() {
 
 void EnumerateAllCESS() {
   size_t num = 0, num_passed = 0;
-  const double mu_e = 1.0e-2, mu_a_donor = 1.0e-2, mu_a_recip = 1.0e-2;
+  std::map<std::string, std::set<int>> cess_norms;
 
   for (int j = 0; j < 256; j++) {
     AssessmentRule R1 = AssessmentRule::MakeDeterministicRule(j);
@@ -56,11 +60,14 @@ void EnumerateAllCESS() {
           continue;
         }
 
-        if (IsCESS(norm)) {
+        auto [isCESS, brange] = CheckCESS(norm);
+        if (isCESS) {
           if (norm.CProb(Reputation::G, Reputation::G) != 1.0) {
             norm = norm.SwapGB();
           }
-          std::cerr << norm.Inspect();
+          //std::cerr << norm.Inspect();
+          cess_norms[norm.SimilarNorm()].insert(norm.Rr.ID());
+          std::cerr << "brange: "  << brange[0] << " " << brange[1] << std::endl;
           num_passed++;
         }
         num++;
@@ -69,6 +76,13 @@ void EnumerateAllCESS() {
   }
 
   IC(num, num_passed);
+  for (auto& kv : cess_norms) {
+    std::cerr << kv.first << " " << kv.second.size() << std::endl;
+    for (auto& v : kv.second) {
+      std::cerr << std::bitset<8>(v) << std::endl;
+    }
+    std::cerr << std::endl;
+  }
 }
 
 void EnumerateR2() {
@@ -91,7 +105,8 @@ void EnumerateR2() {
       AssessmentRule R2 = AssessmentRule::MakeDeterministicRule(k);
       norm.Rr = R2;
 
-      if (IsCESS(norm)) {
+      auto [isCESS, brange] = CheckCESS(norm);
+      if (isCESS) {
         cess_ids.insert(norm.Rr.ID());
         num_passed++;
       }
