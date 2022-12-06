@@ -83,14 +83,14 @@ public:
     for (int id = 0; id < 16; id++) {
       if (norm.P.ID() == id) continue;
       ActionRule mut = ActionRule::MakeDeterministicRule(id);
-      auto b_range = ESSBenefitRange(mut);
+      auto b_range = StableBenefitRangeAgainstMutant(mut);
       if (b_range[0] > b_lower_bound) b_lower_bound = b_range[0];
       if (b_range[1] < b_upper_bound) b_upper_bound = b_range[1];
     }
     return {b_lower_bound, b_upper_bound};
   }
 
-  std::array<double,2> ESSBenefitRange(const ActionRule& mut) const {
+  std::array<double,2> StableBenefitRangeAgainstMutant(const ActionRule& mut) const {
     double b_lower_bound = 1.0;
     double b_upper_bound = std::numeric_limits<double>::max();
 
@@ -105,13 +105,13 @@ public:
     else if (pc_res_res < pc_res_mut) {
       // b/c < { p_c^{\rm res \to mut} - p_c^{\rm mut \to res} / { p_c^{\rm res \to res} - p_c^{\rm res \to mut} }
       b_upper_bound = (pc_res_res - pc_mut_res) / (pc_res_res - pc_res_mut);
-      b_lower_bound = 1.0;
+      b_lower_bound = 0.0;
     }
     else {
       if (pc_res_res >= pc_mut_res) {
         // no ESS
         b_lower_bound = std::numeric_limits<double>::max();
-        b_upper_bound = 1.0;
+        b_upper_bound = 0.0;
       }
       else {
         // ESS for all

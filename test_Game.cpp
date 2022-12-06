@@ -40,8 +40,8 @@ void test_L8() {
     assert(H_alld < 0.01);
     assert(H_allc > 0.99);
 
-    auto br_alld = g.ESSBenefitRange(alld);
-    auto br_allc = g.ESSBenefitRange(allc);
+    auto br_alld = g.StableBenefitRangeAgainstMutant(alld);
+    auto br_allc = g.StableBenefitRangeAgainstMutant(allc);
     IC(br_alld, br_allc);
     assert(br_alld[0] < 1.05);
     assert(br_allc[1] > 100);
@@ -66,8 +66,8 @@ void test_ImageScoring() {
 
   ActionRule alld = ActionRule::ALLD();
   ActionRule allc = ActionRule::ALLC();
-  auto br_alld = g.ESSBenefitRange(alld);
-  auto br_allc = g.ESSBenefitRange(allc);
+  auto br_alld = g.StableBenefitRangeAgainstMutant(alld);
+  auto br_allc = g.StableBenefitRangeAgainstMutant(allc);
   IC(br_alld, br_allc);
 
   auto br = g.ESSBenefitRange();
