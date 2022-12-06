@@ -136,20 +136,31 @@ void CheckAnalyticFormula() {
   norm.Rd.SetGProb(B, G, C, 0.7);
   norm.Rd.SetGProb(B, G, D, 0.3);
   norm.Rd.SetGProb(G, G, D, 0.25);
+  norm.Rd.SetGProb(B, B, C, 0.75);
+  norm.Rd.SetGProb(B, B, D, 0.5);
 
   Game game(1.0e-6, 1.0e-6, 1.0e-6, norm);
 
-  const AssessmentRule R1 = norm.Rd;
-  const AssessmentRule R2 = norm.Rr;
-  const ActionRule P = norm.P;
+  // const AssessmentRule R1 = norm.Rd;
+  auto R1 = [&norm](Reputation X, Reputation Y, Action A) -> double {
+    return norm.Rd.GProb(X, Y, A);
+  };
+  auto R2 = [&norm](Reputation X, Reputation Y, Action A) -> double {
+    return norm.Rr.GProb(X, Y, A);
+  };
+  auto P = [&norm](Reputation X, Reputation Y) -> double {
+    return norm.P.CProb(X, Y);
+  };
+  // const AssessmentRule R2 = norm.Rr;
+  // const ActionRule P = norm.P;
   std::cerr << norm.Inspect();
 
   // R_1(G,G,C) = 1 && R_2(G,G,C) = 1 &&
   // R_1(G,B,D) + R_2(G,B,D) + R_1(B,G,C) + R_2(B,G,C) > 2  => h* = 1
-  double r = R1.GProb(G,B,D) + R2.GProb(G,B,D)
-      + R1.GProb(B,G,C) + R2.GProb(B,G,C);
-  if (R1.GProb(G,G,C) == 1.0 &&
-      R2.GProb(G,G,C) == 1.0 &&
+  double r = R1(G,B,D) + R2(G,B,D)
+      + R1(B,G,C) + R2(B,G,C);
+  if (R1(G,G,C) == 1.0 &&
+      R2(G,G,C) == 1.0 &&
       r > 2.0) {
     if (!CloseEnough(game.h_star, 1.0)) {
       std::cerr << norm.Inspect();
@@ -163,7 +174,7 @@ void CheckAnalyticFormula() {
   }
 
   // P(G,G) = 1
-  if (P.CProb(G,G) == 1.0) {
+  if (P(G,G) == 1.0) {
     if (!CloseEnough(game.pc_res_res, 1.0)) {
       std::cerr << "pc_res_res = " << game.pc_res_res << std::endl;
       assert(false);
@@ -171,17 +182,17 @@ void CheckAnalyticFormula() {
   }
 
   // P(G,B) = 0
-  if (norm.CProb(G,B) != 0.0) {
+  if (P(G,B) != 0.0) {
     std::runtime_error("P(G,B) == 0 is necessary");
   }
 
-  // P(B,G) = 1
-  if (norm.CProb(B,G) == 1.0) {
+  // if P(B,G) = 1
+  if (P(B,G) == 1.0) {
 
     // R_1(B,G,C) > R_1(B,G,D) &&
     // b/c > (R_1(B,G,C) + R_2(G,B) ) / (R_1(B,G,C) - R_1(B,G,D))
-    if (R1.GProb(B,G,C) > R1.GProb(B,G,D) ) {
-      double b_lower = (R1.GProb(B, G, C) + R2.GProb(G, B, D)) / (R1.GProb(B, G, C) - R1.GProb(B, G, D));
+    if (R1(B,G,C) > R1(B,G,D) ) {
+      double b_lower = (R1(B, G, C) + R2(G, B, D)) / (R1(B, G, C) - R1(B, G, D));
       IC(b_lower);
     }
     else {
@@ -190,8 +201,8 @@ void CheckAnalyticFormula() {
 
     // R_1(G,G,D) < 1   &&
     // b/c > ( R_1(B,G,C) + R_2(G,B) ) / ( R_1(G,G,C) - R_1(G,G,D) )
-    if (R1.GProb(G,G,D) < 1.0) {
-      double b_lower = (R1.GProb(B, G, C) + R2.GProb(G, B, D)) / (R1.GProb(G, G, C) - R1.GProb(G, G, D));
+    if (R1(G,G,D) < 1.0) {
+      double b_lower = (R1(B, G, C) + R2(G, B, D)) / (R1(G, G, C) - R1(G, G, D));
       IC(b_lower);
     }
     else {
@@ -200,14 +211,37 @@ void CheckAnalyticFormula() {
 
     // R_1(G,B,C) <= R_1(G,B,D) ||
     // b/c < (R_1(B,G,C) + R_2(G,B) ) / ( R_1(G,B,C) - R_1(G,B,D) )
-    if (R1.GProb(G,B,C) <= R1.GProb(G,B,D)) {
+    if (R1(G,B,C) <= R1(G,B,D)) {
       double b_upper = std::numeric_limits<double>::infinity();
       IC(b_upper);
     }
     else {
-      double b_upper = (R1.GProb(B, G, C) + R2.GProb(G, B, D)) / (R1.GProb(G, B, C) - R1.GProb(G, B, D));
+      double b_upper = (R1(B, G, C) + R2(G, B, D)) / (R1(G, B, C) - R1(G, B, D));
       IC(b_upper);
     }
+
+    // check P(B,B) is the optimal or not
+    if ( P(B,B) == 1 ) {
+      // R_1(B,B,C) > R_1(B,B,D)  &&
+      // b/c > {R_1(B,G,C) + R_2(G,B)} / {R_1(B,B,C) - R_1(B,B,D)}
+      if (R1(B,B,C) <= R1(B,B,D)) {
+        std::runtime_error("R_1(B,B,C) <= R_1(B,B,D) is necessary for P(B,B)=1 to be optimal");
+      }
+      else {
+        double b_lower = (R1(B, G, C) + R2(G, B, D)) / (R1(B, B, C) - R1(B, B, D));
+        IC(b_lower);
+      }
+    }
+    else if ( P(B,B) == 0 ) {
+      if (R1(B,B,C) <= R1(B,B,D)) { // always ESS
+        std::cerr << "always ESS" << std::endl;
+      }
+      else {
+        double b_upper = (R1(B, G, C) + R2(G, B, D)) / (R1(B, B, C) - R1(B, B, D));
+        IC(b_upper);
+      }
+    }
+
   }
 
   auto brange = game.ESSBenefitRange();
