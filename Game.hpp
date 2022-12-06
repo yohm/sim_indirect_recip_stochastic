@@ -32,6 +32,11 @@ public:
   double pc_res_res;  // cooperation probability of resident species
   const Norm norm;
   const Norm r_norm;  // norm that takes into account error rates (mu_e, mu_a)
+private:
+  double P(Reputation X, Reputation Y) const { return r_norm.CProb(X, Y); }
+  double R1(Reputation X, Reputation Y, Action A) const { return r_norm.GProbDonor(X, Y, A); }
+  double R2(Reputation X, Reputation Y, Action A) const { return r_norm.GProbRecip(X, Y, A); }
+public:
   double ResidentEqReputation() const {
     // dynamcis of h(t)
     // dot{h(t)} =
@@ -41,38 +46,46 @@ public:
     // -2h(t)
 
     using Reputation::G, Reputation::B, Action::C, Action::D;
-    double Rd_BB = r_norm.CProb(B, B) * r_norm.GProbDonor(B, B, C) + (1.0 - r_norm.CProb(B, B)) * r_norm.GProbDonor(B, B, D);
-    double Rd_BG = r_norm.CProb(B, G) * r_norm.GProbDonor(B, G, C) + (1.0 - r_norm.CProb(B, G)) * r_norm.GProbDonor(B, G, D);
-    double Rd_GB = r_norm.CProb(G, B) * r_norm.GProbDonor(G, B, C) + (1.0 - r_norm.CProb(G, B)) * r_norm.GProbDonor(G, B, D);
-    double Rd_GG = r_norm.CProb(G, G) * r_norm.GProbDonor(G, G, C) + (1.0 - r_norm.CProb(G, G)) * r_norm.GProbDonor(G, G, D);
+    double R1_BB = P(B, B) * R1(B, B, C) + (1.0 - P(B, B)) * R1(B, B, D);
+    double R1_BG = P(B, G) * R1(B, G, C) + (1.0 - P(B, G)) * R1(B, G, D);
+    double R1_GB = P(G, B) * R1(G, B, C) + (1.0 - P(G, B)) * R1(G, B, D);
+    double R1_GG = P(G, G) * R1(G, G, C) + (1.0 - P(G, G)) * R1(G, G, D);
 
-    double Rr_BB = r_norm.CProb(B, B) * r_norm.GProbRecip(B, B, C) + (1.0 - r_norm.CProb(B, B)) * r_norm.GProbRecip(B, B, D);
-    double Rr_BG = r_norm.CProb(B, G) * r_norm.GProbRecip(B, G, C) + (1.0 - r_norm.CProb(B, G)) * r_norm.GProbRecip(B, G, D);
-    double Rr_GB = r_norm.CProb(G, B) * r_norm.GProbRecip(G, B, C) + (1.0 - r_norm.CProb(G, B)) * r_norm.GProbRecip(G, B, D);
-    double Rr_GG = r_norm.CProb(G, G) * r_norm.GProbRecip(G, G, C) + (1.0 - r_norm.CProb(G, G)) * r_norm.GProbRecip(G, G, D);
+    double R2_BB = P(B, B) * R2(B, B, C) + (1.0 - P(B, B)) * R2(B, B, D);
+    double R2_BG = P(B, G) * R2(B, G, C) + (1.0 - P(B, G)) * R2(B, G, D);
+    double R2_GB = P(G, B) * R2(G, B, C) + (1.0 - P(G, B)) * R2(G, B, D);
+    double R2_GG = P(G, G) * R2(G, G, C) + (1.0 - P(G, G)) * R2(G, G, D);
 
-    // IC(Rd_GG, Rd_GB, Rd_BG, Rd_BB);
-    // IC(Rr_GG, Rr_GB, Rr_BG, Rr_BB);
+    // IC(R1_GG, R1_GB, R1_BG, R1_BB);
+    // IC(R2_GG, R2_GB, R2_BG, R2_BB);
 
     // A = R_1(G,G)+R_2(G,G) -R_1(G,B)-R_2(G,B) -R_1(B,G)-R_2(B,G) + R_1(B,B)+R_2(B,B)
-    double a = Rd_GG + Rr_GG - Rd_GB - Rr_GB - Rd_BG - Rr_BG + Rd_BB + Rr_BB;
+    double a = R1_GG + R2_GG - R1_GB - R2_GB - R1_BG - R2_BG + R1_BB + R2_BB;
     // B = R_1(G,B)+R_2(G,B) +R_1(B,G)+R_2(B,G) -2R_1(B,B) -2R_2(B,B) -2
-    double b = Rd_GB + Rr_GB + Rd_BG + Rr_BG - 2.0 * Rd_BB - 2.0 * Rr_BB - 2.0;
+    double b = R1_GB + R2_GB + R1_BG + R2_BG - 2.0 * R1_BB - 2.0 * R2_BB - 2.0;
     // C = R_1(B,B)+R_2(B,B)
-    double c = Rd_BB + Rr_BB;
+    double c = R1_BB + R2_BB;
 
     // IC(a,b,c);
 
     const double tolerance = 1.0e-6;
     if (a > tolerance) {
       double h_star = (-b - std::sqrt(b*b - 4.0*a*c)) / (2.0*a);
+      double h_dot = a*h_star*h_star + b*h_star + c;
+      // IC(h_star, h_dot);
+      assert(h_dot < tolerance);
       return h_star;
     } else if (a < -tolerance) {
       double h_star = (-b - std::sqrt(b*b - 4.0*a*c)) / (2.0*a);
+      double h_dot = a*h_star*h_star + b*h_star + c;
+      // IC(h_star, h_dot);
+      assert(h_dot < tolerance);
       return h_star;
     }
     else {
       double h_star = -c / b;
+      double h_dot = a*h_star*h_star + b*h_star + c;
+      assert(h_dot < tolerance);
       return h_star;
     }
   }
@@ -134,10 +147,10 @@ public:
     using Reputation::B, Reputation::G, Action::C, Action::D;
     double H_star = MutantEqReputation(mut);
     const ActionRule Pmut = mut.RescaleWithError(mu_e);
-    double pc_res_mut = h_star * H_star * r_norm.CProb(G, G)
-        + h_star * (1.0-H_star) * r_norm.CProb(G, B)
-        + (1.0-h_star) * H_star * r_norm.CProb(B, G)
-        + (1.0-h_star) * (1.0-H_star) * r_norm.CProb(B, B);
+    double pc_res_mut = h_star * H_star * P(G, G)
+        + h_star * (1.0-H_star) * P(G, B)
+        + (1.0-h_star) * H_star * P(B, G)
+        + (1.0-h_star) * (1.0-H_star) * P(B, B);
     double pc_mut_res = H_star * h_star * Pmut.CProb(G, G)
         + H_star * (1.0-h_star) * Pmut.CProb(G, B)
         + (1.0-H_star) * h_star * Pmut.CProb(B, G)
@@ -151,19 +164,27 @@ public:
     //   / { 2 - h^{\ast} [R_1(G,G,P') + R_2(G,G,P) - R_1(B,G,P') - R_2(G,B,P) ] - (1-h^{\ast}) [ R_1(G,B,P') + R_2(B,G,P) - R_1(B,B,P') - R_2(B,B,P)] }.
     using Reputation::B, Reputation::G, Action::C, Action::D;
     const ActionRule Pmut = mut.RescaleWithError(mu_e);
+    auto Pm = [Pmut](Reputation X, Reputation Y)->double { return Pmut.CProb(X, Y); };
 
-    double r1_BBPmut = Pmut.CProb(B, B) * r_norm.GProbDonor(B, B, C) + (1.0 - Pmut.CProb(B, B)) * r_norm.GProbDonor(B, B, D);
-    double r1_BGPmut = Pmut.CProb(B, G) * r_norm.GProbDonor(B, G, C) + (1.0 - Pmut.CProb(B, G)) * r_norm.GProbDonor(B, G, D);
-    double r1_GBPmut = Pmut.CProb(G, B) * r_norm.GProbDonor(G, B, C) + (1.0 - Pmut.CProb(G, B)) * r_norm.GProbDonor(G, B, D);
-    double r1_GGPmut = Pmut.CProb(G, G) * r_norm.GProbDonor(G, G, C) + (1.0 - Pmut.CProb(G, G)) * r_norm.GProbDonor(G, G, D);
+    double r1_BBPmut = Pm(B, B) * R1(B, B, C) + (1.0 - Pm(B, B)) * R1(B, B, D);
+    double r1_BGPmut = Pm(B, G) * R1(B, G, C) + (1.0 - Pm(B, G)) * R1(B, G, D);
+    double r1_GBPmut = Pm(G, B) * R1(G, B, C) + (1.0 - Pm(G, B)) * R1(G, B, D);
+    double r1_GGPmut = Pm(G, G) * R1(G, G, C) + (1.0 - Pm(G, G)) * R1(G, G, D);
 
-    double r2_BBPres = r_norm.CProb(B, B) * r_norm.GProbRecip(B, B, C) + (1.0 - r_norm.CProb(B, B)) * r_norm.GProbRecip(B, B, D);
-    double r2_BGPres = r_norm.CProb(B, G) * r_norm.GProbRecip(B, G, C) + (1.0 - r_norm.CProb(B, G)) * r_norm.GProbRecip(B, G, D);
-    double r2_GBPres = r_norm.CProb(G, B) * r_norm.GProbRecip(G, B, C) + (1.0 - r_norm.CProb(G, B)) * r_norm.GProbRecip(G, B, D);
-    double r2_GGPres = r_norm.CProb(G, G) * r_norm.GProbRecip(G, G, C) + (1.0 - r_norm.CProb(G, G)) * r_norm.GProbRecip(G, G, D);
+    double r2_BBPres = P(B, B) * R2(B, B, C) + (1.0 - P(B, B)) * R2(B, B, D);
+    double r2_BGPres = P(B, G) * R2(B, G, C) + (1.0 - P(B, G)) * R2(B, G, D);
+    double r2_GBPres = P(G, B) * R2(G, B, C) + (1.0 - P(G, B)) * R2(G, B, D);
+    double r2_GGPres = P(G, G) * R2(G, G, C) + (1.0 - P(G, G)) * R2(G, G, D);
 
     double num = h_star * (r1_BGPmut + r2_GBPres) + (1.0 - h_star) * (r1_BBPmut + r2_BBPres);
     double den = 2.0 - h_star * (r1_GGPmut + r2_GGPres - r1_BGPmut - r2_GBPres) - (1.0 - h_star) * (r1_GBPmut + r2_BGPres - r1_BBPmut - r2_BBPres);
+    double H_star = num / den;
+    double H_dot = ( h_star * H_star ) * (r1_GGPmut + r2_GGPres)
+        + ( h_star * (1.0 - H_star) ) * (r1_BGPmut + r2_GBPres)
+        + ( (1.0 - h_star) * H_star ) * (r1_GBPmut + r2_BGPres)
+        + ( (1.0 - h_star) * (1.0 - H_star) ) * (r1_BBPmut + r2_BBPres)
+        - 2 * H_star;
+    assert( std::abs(H_dot) < 1.0e-6 );
     return num / den;
   }
 };
