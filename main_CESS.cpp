@@ -133,10 +133,11 @@ void CheckAnalyticFormula() {
   Norm norm = Norm::L1();
   norm.Rd.SetGProb(G, B, D, 0.5);
   norm.Rd.SetGProb(G, B, C, 0.7);
-  norm.Rd.SetGProb(B, G, D, 0.1);
+  norm.Rd.SetGProb(B, G, C, 0.7);
+  norm.Rd.SetGProb(B, G, D, 0.3);
   norm.Rd.SetGProb(G, G, D, 0.25);
 
-  Game game(1.0e-3, 1.0e-3, 1.0e-3, norm);
+  Game game(1.0e-6, 1.0e-6, 1.0e-6, norm);
 
   const AssessmentRule R1 = norm.Rd;
   const AssessmentRule R2 = norm.Rr;
@@ -178,9 +179,9 @@ void CheckAnalyticFormula() {
   if (norm.CProb(B,G) == 1.0) {
 
     // R_1(B,G,C) > R_1(B,G,D) &&
-    // b/c > (R_1(B,G,D) + R_2(G,B) ) / (R_1(B,G,C) - R_1(B,G,D))
+    // b/c > (R_1(B,G,C) + R_2(G,B) ) / (R_1(B,G,C) - R_1(B,G,D))
     if (R1.GProb(B,G,C) > R1.GProb(B,G,D) ) {
-      double b_lower = (R1.GProb(B, G, D) + R2.GProb(G, B, D)) / (R1.GProb(B, G, C) - R1.GProb(B, G, D));
+      double b_lower = (R1.GProb(B, G, C) + R2.GProb(G, B, D)) / (R1.GProb(B, G, C) - R1.GProb(B, G, D));
       IC(b_lower);
     }
     else {
@@ -209,9 +210,8 @@ void CheckAnalyticFormula() {
     }
   }
 
-
-  auto [isCESS, brange] = CheckCESS(norm);
-  IC(isCESS, brange);
+  auto brange = game.ESSBenefitRange();
+  IC(brange);
 }
 
 void FindMutant() {
@@ -227,7 +227,7 @@ void FindMutant() {
   for (int id = 0; id < 16; id++) {
     if (norm.P.ID() == id) continue;
     ActionRule mut = ActionRule::MakeDeterministicRule(id);
-    auto b_range = game.ESSBenefitRange(mut);
+    auto b_range = game.StableBenefitRangeAgainstMutant(mut);
     IC(id, b_range);
   }
 
