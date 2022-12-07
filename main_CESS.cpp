@@ -6,6 +6,8 @@
 #include "Game.hpp"
 
 
+using Reputation::G, Reputation::B, Action::C, Action::D;
+
 std::pair<bool,std::array<double,2>> CheckCESS(const Norm& norm, double mu_a_recip = 1.0e-3) {
   const double mu_e = 1.0e-3, mu_a_donor = 1.0e-3;
   Game game(mu_e, mu_a_donor, mu_a_recip, norm);
@@ -126,29 +128,11 @@ bool CloseEnough(double a, double b, double tol = 1.0e-2) {
   return std::abs(a - b) < tol;
 }
 
-void CheckAnalyticFormula() {
-  // using Reputation
-  using Reputation::G, Reputation::B, Action::C, Action::D;
+std::array<double,2> AnalyticBenefitRange(const Norm& norm) {
 
-  /*
-  Norm norm = Norm::L1();
-  norm.Rd.SetGProb(G, B, D, 0.5);
-  norm.Rd.SetGProb(G, B, C, 0.7);
-  norm.Rd.SetGProb(B, G, C, 0.7);
-  norm.Rd.SetGProb(B, G, D, 0.3);
-  norm.Rd.SetGProb(G, G, D, 0.25);
-  norm.Rd.SetGProb(B, B, C, 0.75);
-  norm.Rd.SetGProb(B, B, D, 0.5);
-   */
-
-  Norm norm = Norm::L1();
-  norm.Rd.SetGProb(B, G, D, 1.0);
-  norm.Rd.SetGProb(B, B, C, 0.0);
-  norm.Rd.SetGProb(B, B, D, 1.0);
-  norm.P.SetCProb(B, G, 0.0);
-  norm.P.SetCProb(B, B, 0.0);
-
-  Game game(1.0e-6, 1.0e-6, 1.0e-6, norm);
+  if (!norm.P.IsDeterministic()) {
+    throw std::runtime_error("action rule is not deterministic");
+  }
 
   auto R1 = [&norm](Reputation X, Reputation Y, Action A) -> double {
     return norm.Rd.GProb(X, Y, A);
@@ -169,28 +153,29 @@ void CheckAnalyticFormula() {
   if (R1(G,G,C) == 1.0 &&
       R2(G,G,C) == 1.0 &&
       r > 2.0) {
-    if (!CloseEnough(game.h_star, 1.0)) {
-      std::cerr << "h* = " << game.h_star << std::endl;
-      throw std::runtime_error("h* should be 1");
-    }
+    // h_star == 1 should be true
   }
   else {
+    std::cerr << "R1(G,G,C) = " << R1(G,G,C) << std::endl;
+    std::cerr << "R2(G,G,C) = " << R2(G,G,C) << std::endl;
     std::cerr << "r = " << r << std::endl;
-    throw std::runtime_error("r is not greater than 2");
+    throw std::runtime_error("h_star is not 1");
   }
 
   // P(G,G) = 1
   if (P(G,G) == 1.0) {
-    if (!CloseEnough(game.pc_res_res, 1.0)) {
-      std::cerr << "pc_res_res = " << game.pc_res_res << std::endl;
-      throw std::runtime_error("pc_res_res should be 1");
-    }
+    // game.pc_res_res == 1 should be true
+  }
+  else {
+    throw std::runtime_error("P(G,G) is not 1");
   }
 
   // P(G,B) = 0
   if (P(G,B) != 0.0) {
     throw std::runtime_error("P(G,B) == 0 is necessary");
   }
+
+  std::array<double,2> b_range = {0.0, std::numeric_limits<double>::max()};
 
   // if P(B,G) = 1
   if (P(B,G) == 1.0) {
@@ -199,31 +184,46 @@ void CheckAnalyticFormula() {
     // b/c > (R_1(B,G,C) + R_2(G,B) ) / (R_1(B,G,C) - R_1(B,G,D))
     if (R1(B,G,C) > R1(B,G,D) ) {
       double b_lower = (R1(B, G, C) + R2(G, B, D)) / (R1(B, G, C) - R1(B, G, D));
-      IC(b_lower);
+      std::cerr << "BG: b_lower = " << b_lower << std::endl;
+      if (b_lower > b_range[0]) {
+          b_range[0] = b_lower;
+      }
     }
     else {
-      throw std::runtime_error("R_1(B,G,C) > R_1(B,G,D) is necessary");
+      b_range[0] = std::numeric_limits<double>::max();
+      b_range[1] = 0.0;
+      std::cerr << "BG: R_1(B,G,C) > R_1(B,G,D) is necessary" << std::endl;
+      return b_range;
     }
 
     // R_1(G,G,D) < 1   &&
     // b/c > ( R_1(B,G,C) + R_2(G,B) ) / ( R_1(G,G,C) - R_1(G,G,D) )
     if (R1(G,G,D) < 1.0) {
       double b_lower = (R1(B, G, C) + R2(G, B, D)) / (R1(G, G, C) - R1(G, G, D));
-      IC(b_lower);
+      std::cerr << "GG: b_lower = " << b_lower << std::endl;
+      if (b_lower > b_range[0]) {
+          b_range[0] = b_lower;
+      }
     }
     else {
-      throw std::runtime_error("R_1(G,G,D) < 1 is necessary");
+      b_range[0] = std::numeric_limits<double>::max();
+      b_range[1] = 0.0;
+      std::cerr << "GG: R_1(G,G,D) < 1 is necessary" << std::endl;
+      return b_range;
     }
 
     // R_1(G,B,C) <= R_1(G,B,D) ||
     // b/c < (R_1(B,G,C) + R_2(G,B) ) / ( R_1(G,B,C) - R_1(G,B,D) )
     if (R1(G,B,C) <= R1(G,B,D)) {
       double b_upper = std::numeric_limits<double>::infinity();
-      IC(b_upper);
+      std::cerr << "GB: b_upper = " << b_upper << std::endl;
     }
     else {
       double b_upper = (R1(B, G, C) + R2(G, B, D)) / (R1(G, B, C) - R1(G, B, D));
-      IC(b_upper);
+      std::cerr << "GB: b_upper = " << b_upper << std::endl;
+      if (b_upper < b_range[1]) {
+        b_range[1] = b_upper;
+      }
     }
 
     // check P(B,B) is the optimal or not
@@ -231,20 +231,29 @@ void CheckAnalyticFormula() {
       // R_1(B,B,C) > R_1(B,B,D)  &&
       // b/c > {R_1(B,G,C) + R_2(G,B)} / {R_1(B,B,C) - R_1(B,B,D)}
       if (R1(B,B,C) <= R1(B,B,D)) {
-        throw std::runtime_error("R_1(B,B,C) <= R_1(B,B,D) is necessary for P(B,B)=1 to be optimal");
+        b_range[0] = std::numeric_limits<double>::max();
+        b_range[1] = 0.0;
+        std::cerr << "BB: R_1(B,B,C) <= R_1(B,B,D) is necessary for P(B,B)=1 to be optimal" << std::endl;
+        return b_range;
       }
       else {
         double b_lower = (R1(B, G, C) + R2(G, B, D)) / (R1(B, B, C) - R1(B, B, D));
-        IC(b_lower);
+        std::cerr << "BB: b_lower = " << b_lower << std::endl;
+        if (b_lower > b_range[0]) {
+          b_range[0] = b_lower;
+        }
       }
     }
     else if ( P(B,B) == 0 ) {
       if (R1(B,B,C) <= R1(B,B,D)) { // always ESS
-        std::cerr << "always ESS" << std::endl;
+        std::cerr << "BB: always ESS" << std::endl;
       }
       else {
         double b_upper = (R1(B, G, C) + R2(G, B, D)) / (R1(B, B, C) - R1(B, B, D));
-        IC(b_upper);
+        std::cerr << "BB: b_upper = " << b_upper << std::endl;
+        if (b_upper < b_range[1]) {
+          b_range[1] = b_upper;
+        }
       }
     }
   }
@@ -253,31 +262,42 @@ void CheckAnalyticFormula() {
     // R_1(B,G,C) \leq R_1(B,G,D)  ||
     // b/c < {R_1(B,G,C)+R_2(G,B)} / {R_1(B,G,C)-R_1(B,G,D)}
     if (R1(B,G,C) <= R1(B,G,D) ) {
-      std::cerr << "always ESS" << std::endl;
+      std::cerr << "BG: always ESS" << std::endl;
     }
     else {
       double b_upper = (R1(B, G, C) + R2(G, B, D)) / (R1(B, G, C) - R1(B, G, D));
-      IC(b_upper);
+      std::cerr << "BG: b_upper = " << b_upper << std::endl;
+      if (b_upper < b_range[1]) {
+        b_range[1] = b_upper;
+      }
     }
 
     // R_1(G,G,D) < 1 &&
     // b/c > 1 + {R_1(B,G,D)+R_2(G,B)} / {1-R_1(G,G,D)}
     if (R1(G,G,D) < 1.0) {
       double b_lower = 1.0 + (R1(B, G, D) + R2(G, B, D)) / (1.0 - R1(G, G, D));
-      IC(b_lower);
+      std::cerr << "GG: b_lower = " << b_lower << std::endl;
+      if (b_lower > b_range[0]) {
+        b_range[0] = b_lower;
+      }
     }
     else {
-      throw std::runtime_error("R_1(G,G,D) < 1 is necessary");
+      b_range[0] = std::numeric_limits<double>::max();
+      b_range[1] = 0.0;
+      std::cerr << "GG: R_1(G,G,D) < 1 is necessary" << std::endl;
     }
 
     // R_1(G,B,D) - R_1(G,B,C) \geq 0 ||
     // b/c < 1 + {R_1(B,G,D)+R_2(G,B)} / {R_1(G,B,C) - R_1(G,B,D)}
     if (R1(G,B,D) - R1(G,B,C) >= 0.0) {
-      std::cerr << "always ESS" << std::endl;
+      std::cerr << "GB: always ESS" << std::endl;
     }
     else {
       double b_upper = 1.0 + (R1(B, G, D) + R2(G, B, D)) / (R1(G, B, C) - R1(G, B, D));
-      IC(b_upper);
+      std::cerr << "GB: b_upper = " << b_upper << std::endl;
+      if (b_upper < b_range[1]) {
+        b_range[1] = b_upper;
+      }
     }
 
     // check P(B,B) is the optimal or not
@@ -286,29 +306,35 @@ void CheckAnalyticFormula() {
       // b/c > 1 + {R_1(B,G,D) + R_2(G,B) } / {R_1(B,B,C) - R_1(B,B,D)}
 
       if (R1(B,B,C) <= R1(B,B,D)) {
-        throw std::runtime_error("R_1(B,B,C) <= R_1(B,B,D) is necessary for P(B,B)=1 to be optimal");
+        b_range[0] = std::numeric_limits<double>::max();
+        b_range[1] = 0.0;
+        std::cerr << "BB: R_1(B,B,C) <= R_1(B,B,D) is necessary for P(B,B)=1 to be optimal" << std::endl;
       }
       else {
         double b_lower = 1.0 + (R1(B, G, D) + R2(G, B, D)) / (R1(B, B, C) - R1(B, B, D));
-        IC(b_lower);
+        std::cerr << "BB: b_lower = " << b_lower << std::endl;
+        if (b_lower > b_range[0]) {
+          b_range[0] = b_lower;
+        }
       }
     }
     else if ( P(B,B) == 0 ) {
       if (R1(B,B,C) <= R1(B,B,D)) { // always ESS
-        std::cerr << "always ESS" << std::endl;
+        std::cerr << "BB: always ESS" << std::endl;
       }
       else {
         double b_upper = 1.0 + (R1(B, G, D) + R2(G, B, D)) / (R1(B, B, C) - R1(B, B, D));
-        IC(b_upper);
+        std::cerr << "BB: b_upper = " << b_upper << std::endl;
+        if (b_upper < b_range[1]) {
+          b_range[1] = b_upper;
+        }
       }
     }
-
   } else {
     throw std::runtime_error("P(B,G) == 0 or 1 is necessary");
   }
 
-  auto brange = game.ESSBenefitRange();
-  IC(brange);
+  return b_range;
 }
 
 void FindMutant() {
@@ -340,7 +366,25 @@ int main() {
   // EnumerateAllCESS();
   // EnumerateR2();
 
-  CheckAnalyticFormula();
+  Norm norm = Norm::L1();
+  norm.Rd.SetGProb(G, B, D, 0.5);
+  norm.Rd.SetGProb(G, B, C, 0.7);
+  norm.Rd.SetGProb(B, G, C, 0.7);
+  norm.Rd.SetGProb(B, G, D, 0.3);
+  norm.Rd.SetGProb(G, G, D, 0.25);
+  norm.Rd.SetGProb(B, B, C, 0.75);
+  norm.Rd.SetGProb(B, B, D, 0.5);
+  /*
+  Norm norm = Norm::L1();
+  norm.Rd.SetGProb(B, G, D, 1.0);
+  norm.Rd.SetGProb(B, B, C, 0.0);
+  norm.Rd.SetGProb(B, B, D, 1.0);
+  norm.P.SetCProb(B, G, 0.0);
+  norm.P.SetCProb(B, B, 0.0);
+   */
+  auto brange1 = AnalyticBenefitRange(norm);
+  auto brange2 = Game(1.0e-6, 1.0e-6, 1.0e-6, norm).ESSBenefitRange();
+  IC(brange1, brange2);
 
   // FindMutant();
 
