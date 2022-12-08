@@ -5,6 +5,8 @@
 #include "Norm.hpp"
 
 
+using Reputation::G, Reputation::B, Action::C, Action::D;
+
 template <typename T>
 bool IsAllClose(T a, T b, double epsilon = 0.0001) {
   for (size_t i = 0; i < a.size(); i++) {
@@ -49,6 +51,18 @@ void test_ActionRule() {
   auto P4 = ActionRule::MakeDeterministicRule(7);
   assert( P4.ID() == 7 );
 
+  // initialize by tables
+  ActionRule P5({
+    { {G,G}, 0.1 },
+    { {G,B}, 0.2 },
+    { {B,G}, 0.3 },
+    { {B,B}, 0.4 },
+  });
+  assert( P5.CProb(Reputation::G, Reputation::G) == 0.1 );
+  assert( P5.CProb(Reputation::G, Reputation::B) == 0.2 );
+  assert( P5.CProb(Reputation::B, Reputation::G) == 0.3 );
+  assert( P5.CProb(Reputation::B, Reputation::B) == 0.4 );
+
   std::cout << "test_ActionRule passed!" << std::endl;
 }
 
@@ -83,6 +97,25 @@ void test_AssessmentRule() {
   auto is = AssessmentRule::ImageScoring();
   assert( is.IsDeterministic() == true );
   assert( is.ID() == 0b10101010 );
+
+  AssessmentRule Q4({
+    {{G,G,C}, 0.1},
+    {{G,G,D}, 0.2},
+    {{G,B,C}, 0.3},
+    {{G,B,D}, 0.4},
+    {{B,G,C}, 0.5},
+    {{B,G,D}, 0.6},
+    {{B,B,C}, 0.7},
+    {{B,B,D}, 0.8}
+  });
+  assert( Q4.GProb(Reputation::G, Reputation::G, Action::C) == 0.1 );
+  assert( Q4.GProb(Reputation::G, Reputation::G, Action::D) == 0.2 );
+  assert( Q4.GProb(Reputation::G, Reputation::B, Action::C) == 0.3 );
+  assert( Q4.GProb(Reputation::G, Reputation::B, Action::D) == 0.4 );
+  assert( Q4.GProb(Reputation::B, Reputation::G, Action::C) == 0.5 );
+  assert( Q4.GProb(Reputation::B, Reputation::G, Action::D) == 0.6 );
+  assert( Q4.GProb(Reputation::B, Reputation::B, Action::C) == 0.7 );
+  assert( Q4.GProb(Reputation::B, Reputation::B, Action::D) == 0.8 );
 
   std::cout << "test_AssessmentRule passed!" << std::endl;
 }

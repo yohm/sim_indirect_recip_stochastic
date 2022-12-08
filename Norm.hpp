@@ -7,6 +7,7 @@
 #include <sstream>
 #include <vector>
 #include <array>
+#include <map>
 #include <cstdint>
 
 
@@ -56,6 +57,17 @@ class ActionRule {
   public:
   ActionRule(const std::array<double,4>& coop_probs) : coop_probs(coop_probs) {};
   // {P(C|B,B), P(C|B,G), P(C|G,B), P(C|G,G)}
+
+  ActionRule(const std::map<std::pair<Reputation,Reputation>,double>& actions) {
+    // { (B,B,P(B,B)), (B,G,P(B,G)), (G,B,P(G,B)), (G,G,P(G,G)) }
+    if (actions.size() != 4) {
+      throw std::runtime_error("unspecified actions");
+    }
+    coop_probs[0] = actions.at({Reputation::B, Reputation::B});
+    coop_probs[1] = actions.at({Reputation::B, Reputation::G});
+    coop_probs[2] = actions.at({Reputation::G, Reputation::B});
+    coop_probs[3] = actions.at({Reputation::G, Reputation::G});
+  }
 
   std::array<double,4> coop_probs; // P(C|B,B), P(C|B,G), P(C|G,B), P(C|G,G)
 
@@ -154,6 +166,21 @@ class AssessmentRule {
   public:
   AssessmentRule(const std::array<double,8>& g_probs) : good_probs(g_probs) {};
   // {P(G|B,B,D), P(G|B,B,C), P(G|B,G,D), P(G|B,G,C), P(G|G,B,D), P(G|G,B,C), P(G|G,G,D), P(G|G,G,C)}
+
+  AssessmentRule(const std::map< std::tuple<Reputation,Reputation,Action>, double> & g_probs) {
+    if (g_probs.size() != 8) {
+      throw std::runtime_error("AssessmentRule: g_probs must have 8 elements");
+    }
+    good_probs[0] = g_probs.at({Reputation::B, Reputation::B, Action::D});
+    good_probs[1] = g_probs.at({Reputation::B, Reputation::B, Action::C});
+    good_probs[2] = g_probs.at({Reputation::B, Reputation::G, Action::D});
+    good_probs[3] = g_probs.at({Reputation::B, Reputation::G, Action::C});
+    good_probs[4] = g_probs.at({Reputation::G, Reputation::B, Action::D});
+    good_probs[5] = g_probs.at({Reputation::G, Reputation::B, Action::C});
+    good_probs[6] = g_probs.at({Reputation::G, Reputation::G, Action::D});
+    good_probs[7] = g_probs.at({Reputation::G, Reputation::G, Action::C});
+  }
+
   std::array<double,8> good_probs;
 
   AssessmentRule Clone() const { return AssessmentRule(good_probs); }
