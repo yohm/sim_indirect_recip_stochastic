@@ -143,7 +143,6 @@ std::array<double,2> AnalyticBenefitRange(const Norm& norm) {
   auto P = [&norm](Reputation X, Reputation Y) -> double {
     return norm.P.CProb(X, Y);
   };
-  std::cerr << norm.Inspect();
 
   // R_1(G,G,C) = 1 && R_2(G,G,C) = 1 &&
   // R_1(G,B) + R_2(G,B) + R_1(B,G) + R_2(B,G) > 2  => h* = 1
@@ -337,6 +336,71 @@ std::array<double,2> AnalyticBenefitRange(const Norm& norm) {
   return b_range;
 }
 
+Norm MakeNormFromTable(std::array<Action,4> actions, std::array<double,8> r1, std::array<double,8> r2 = {1,1,0,0,1,1,0,0}) {
+  ActionRule ar({
+                    {{G,G}, actions[0]==C?1:0},
+                    {{G,B}, actions[1]==C?1:0},
+                    {{B,G}, actions[2]==C?1:0},
+                    {{B,B}, actions[3]==C?1:0},
+  });
+
+  AssessmentRule Rd({
+                        {{G,G,C}, r1[0]}, {{G,G,D}, r1[1]},
+                        {{G,B,C}, r1[2]}, {{G,B,D}, r1[3]},
+                        {{B,G,C}, r1[4]}, {{B,G,D}, r1[5]},
+                        {{B,B,C}, r1[6]}, {{B,B,D}, r1[7]},
+  });
+  AssessmentRule Rr({
+                        {{G,G,C}, r2[0]}, {{G,G,D}, r2[1]},
+                        {{G,B,C}, r2[2]}, {{G,B,D}, r2[3]},
+                        {{B,G,C}, r2[4]}, {{B,G,D}, r2[5]},
+                        {{B,B,C}, r2[6]}, {{B,B,D}, r2[7]},
+                    });
+  return Norm(Rd, Rr, ar);
+}
+
+void CompareAnalyticNumericalBranges() {
+  /*
+  Norm norm = MakeNormFromTable(
+      {C,D,C,D},
+      {
+        1.0, 0.0,
+        0.0, 1.0,
+        1.0, 0.0,
+        0.0, 0.0
+       }
+      );
+      */
+
+  Norm norm = MakeNormFromTable(
+      {C,D,C,C},
+      {
+        1.0, 0.4,
+        0.5, 0.5,
+        1.0, 0.3,
+        1.0, 0.0
+       },
+      {
+        1.0, 0.0,
+        1.0, 0.0,
+        1.0, 0.0,
+        1.0, 0.0,
+      }
+  );
+
+  // Norm norm = Norm::L1();
+  // norm.Rd.SetGProb(B, G, D, 1.0);
+  // norm.Rd.SetGProb(B, B, C, 0.0);
+  // norm.Rd.SetGProb(B, B, D, 1.0);
+  // norm.P.SetCProb(B, G, 0.0);
+  // norm.P.SetCProb(B, B, 0.0);
+
+  std::cerr << norm.Inspect();
+  auto brange1 = AnalyticBenefitRange(norm);
+  auto brange2 = Game(1.0e-6, 1.0e-6, 1.0e-6, norm).ESSBenefitRange();
+  IC(brange1, brange2);
+}
+
 void FindMutant() {
   Norm norm = Norm::L3();
   norm.Rr = AssessmentRule::MakeDeterministicRule(0b10001000);
@@ -365,28 +429,9 @@ int main() {
   // FindLeadingEight();
   // EnumerateAllCESS();
   // EnumerateR2();
-
-  Norm norm = Norm::L1();
-  norm.Rd.SetGProb(G, B, D, 0.5);
-  norm.Rd.SetGProb(G, B, C, 0.7);
-  norm.Rd.SetGProb(B, G, C, 0.7);
-  norm.Rd.SetGProb(B, G, D, 0.3);
-  norm.Rd.SetGProb(G, G, D, 0.25);
-  norm.Rd.SetGProb(B, B, C, 0.75);
-  norm.Rd.SetGProb(B, B, D, 0.5);
-  /*
-  Norm norm = Norm::L1();
-  norm.Rd.SetGProb(B, G, D, 1.0);
-  norm.Rd.SetGProb(B, B, C, 0.0);
-  norm.Rd.SetGProb(B, B, D, 1.0);
-  norm.P.SetCProb(B, G, 0.0);
-  norm.P.SetCProb(B, B, 0.0);
-   */
-  auto brange1 = AnalyticBenefitRange(norm);
-  auto brange2 = Game(1.0e-6, 1.0e-6, 1.0e-6, norm).ESSBenefitRange();
-  IC(brange1, brange2);
-
   // FindMutant();
+
+  CompareAnalyticNumericalBranges();
 
   return 0;
 }
