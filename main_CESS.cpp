@@ -365,7 +365,7 @@ bool CompareAnalyticNumericalBranges(const Norm& norm) {
   auto brange1 = AnalyticBenefitRange(norm);
   auto brange2 = Game(1.0e-6, 1.0e-6, 1.0e-6, norm).ESSBenefitRange();
   IC(brange1, brange2);
-  double th = 1.0e-2;
+  double th = 3.0e-2;
   if (brange1[0] > brange1[1]) {
     return brange2[0] > brange2[1];
   }
@@ -397,13 +397,14 @@ void FindMutant() {
 }
 
 void RandomCheckAnalyticNorms() {
-  size_t num_norms = 10;
+  size_t num_norms = 100000;
   std::mt19937_64 rng(123456789);
   std::uniform_real_distribution<double> dist(0.0, 1.0);
   auto r01 = [&rng,&dist]() -> double {
     return dist(rng);
   };
 
+  std::vector<Norm> unpassed;
   for (size_t i = 0; i < num_norms; i++) {
     std::cerr << std::endl << "i: " << i << std::endl;
     Action P_bg = (rng() % 2 == 0) ? C : D;
@@ -411,13 +412,13 @@ void RandomCheckAnalyticNorms() {
     std::array<Action,4> actions = {C,D,P_bg,P_bb};
 
     std::array<double,8> r1 = {
-        1.0, r01(),   // GG
+        1.0,   r01(), // GG
         r01(), r01(), // GB
         r01(), r01(), // BG
         r01(), r01()  // BB
     };
     std::array<double,8> r2 = {
-        1.0, r01(),   // GG
+        1.0,   r01(), // GG
         r01(), r01(), // GB
         r01(), r01(), // BG
         r01(), r01()  // BB
@@ -430,11 +431,20 @@ void RandomCheckAnalyticNorms() {
     Norm norm = MakeNormFromTable(actions, r1, r2);
     bool b = CompareAnalyticNumericalBranges(norm);
     if (!b) {
-      std::cerr << Game(1.0e-6, 1.0e-6, 1.0e-6, norm).Inspect();
-
-      throw std::runtime_error("Failed");
+      unpassed.push_back(norm);
+      // throw std::runtime_error("Failed");
     }
+
   }
+
+  std::cerr << "Number of unpassed: " << unpassed.size() << std::endl;
+  for (auto& norm : unpassed) {
+    bool b = CompareAnalyticNumericalBranges(norm);
+    std::cerr << "-----------------------------------------------------------\n";
+    std::cerr << Game(1.0e-6, 1.0e-6, 1.0e-6, norm).Inspect();
+    std::cerr << "-----------------------------------------------------------\n\n";
+  }
+
 }
 
 int main() {
