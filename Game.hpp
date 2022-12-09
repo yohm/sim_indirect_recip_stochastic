@@ -23,8 +23,19 @@ public:
     std::stringstream ss;
     ss << "Game:" << std::endl
        << "(mu_e, mu_a_donor, mu_a_recip): (" << mu_e << ", " << mu_a_donor << ", " << mu_a_recip << ")" << std::endl
-       << "(Norm): " << norm.Inspect() << "" << std::endl
+       << "(Norm): " << norm.Inspect()
        << "(c_prob,h*): " << pc_res_res << ' ' << h_star << std::endl;
+    for (int id = 0; id < 16; id++) {
+      if (norm.P.ID() == id) continue;
+      ActionRule mut = ActionRule::MakeDeterministicRule(id);
+      auto b_range = StableBenefitRangeAgainstMutant(mut);
+      ss << "Against mutant: ";
+      ss << ((mut.CProb(Reputation::G, Reputation::G) == 1.0) ? "C" : "D");
+      ss << ((mut.CProb(Reputation::G, Reputation::B) == 1.0) ? "C" : "D");
+      ss << ((mut.CProb(Reputation::B, Reputation::G) == 1.0) ? "C" : "D");
+      ss << ((mut.CProb(Reputation::B, Reputation::B) == 1.0) ? "C" : "D");
+      ss << " , it is stable for benefit range: " << b_range[0] << ' ' << b_range[1] << std::endl;
+    }
     return ss.str();
   }
   const double mu_e, mu_a_donor, mu_a_recip;

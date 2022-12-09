@@ -2,6 +2,7 @@
 #include <vector>
 #include <set>
 #include <map>
+#include <random>
 #include "Norm.hpp"
 #include "Game.hpp"
 
@@ -359,46 +360,16 @@ Norm MakeNormFromTable(std::array<Action,4> actions, std::array<double,8> r1, st
   return Norm(Rd, Rr, ar);
 }
 
-void CompareAnalyticNumericalBranges() {
-  /*
-  Norm norm = MakeNormFromTable(
-      {C,D,C,D},
-      {
-        1.0, 0.0,
-        0.0, 1.0,
-        1.0, 0.0,
-        0.0, 0.0
-       }
-      );
-      */
-
-  Norm norm = MakeNormFromTable(
-      {C,D,C,C},
-      {
-        1.0, 0.4,
-        0.5, 0.5,
-        1.0, 0.3,
-        1.0, 0.0
-       },
-      {
-        1.0, 0.0,
-        1.0, 0.0,
-        1.0, 0.0,
-        1.0, 0.0,
-      }
-  );
-
-  // Norm norm = Norm::L1();
-  // norm.Rd.SetGProb(B, G, D, 1.0);
-  // norm.Rd.SetGProb(B, B, C, 0.0);
-  // norm.Rd.SetGProb(B, B, D, 1.0);
-  // norm.P.SetCProb(B, G, 0.0);
-  // norm.P.SetCProb(B, B, 0.0);
-
+bool CompareAnalyticNumericalBranges(const Norm& norm) {
   std::cerr << norm.Inspect();
   auto brange1 = AnalyticBenefitRange(norm);
   auto brange2 = Game(1.0e-6, 1.0e-6, 1.0e-6, norm).ESSBenefitRange();
   IC(brange1, brange2);
+  double th = 1.0e-2;
+  if (brange1[0] > brange1[1]) {
+    return brange2[0] > brange2[1];
+  }
+  return ( std::abs(brange1[0] - brange2[0]) < brange1[0]*th && std::abs(brange1[1] - brange2[1]) < brange1[1]*th );
 }
 
 void FindMutant() {
@@ -425,13 +396,74 @@ void FindMutant() {
 
 }
 
+void RandomCheckAnalyticNorms() {
+  size_t num_norms = 10;
+  std::mt19937_64 rng(123456789);
+  std::uniform_real_distribution<double> dist(0.0, 1.0);
+  auto r01 = [&rng,&dist]() -> double {
+    return dist(rng);
+  };
+
+  for (size_t i = 0; i < num_norms; i++) {
+    std::cerr << std::endl << "i: " << i << std::endl;
+    Action P_bg = (rng() % 2 == 0) ? C : D;
+    Action P_bb = (rng() % 2 == 0) ? C : D;
+    std::array<Action,4> actions = {C,D,P_bg,P_bb};
+
+    std::array<double,8> r1 = {
+        1.0, r01(),   // GG
+        r01(), r01(), // GB
+        r01(), r01(), // BG
+        r01(), r01()  // BB
+    };
+    std::array<double,8> r2 = {
+        1.0, r01(),   // GG
+        r01(), r01(), // GB
+        r01(), r01(), // BG
+        r01(), r01()  // BB
+    };
+
+    // R_1(G,B,D) + R_2(G,B,D) + R_1(B,G,C) + R_2(B,G,C) > 2 is necessary
+    double recov = (P_bg==C) ? (r1[3] + r2[3] + r1[4] + r2[4]) : (r1[3] + r2[3] + r1[5] + r2[5]);
+    if (recov <= 2.0) { std::cerr << "does not satisfy recov > 2. continue." << std::endl; continue; }
+
+    Norm norm = MakeNormFromTable(actions, r1, r2);
+    bool b = CompareAnalyticNumericalBranges(norm);
+    if (!b) {
+      std::cerr << Game(1.0e-6, 1.0e-6, 1.0e-6, norm).Inspect();
+
+      throw std::runtime_error("Failed");
+    }
+  }
+}
+
 int main() {
   // FindLeadingEight();
   // EnumerateAllCESS();
   // EnumerateR2();
   // FindMutant();
 
-  CompareAnalyticNumericalBranges();
+  /*
+  Norm norm = MakeNormFromTable(
+      {C,D,C,C},
+      {
+          1.0, 0.4,
+          0.5, 0.5,
+          1.0, 0.3,
+          1.0, 0.0
+      },
+      {
+          1.0, 0.0,
+          1.0, 0.0,
+          1.0, 0.0,
+          1.0, 0.0,
+      }
+  );
+  bool ok = CompareAnalyticNumericalBranges(norm);
+  assert(ok);
+   */
+
+  RandomCheckAnalyticNorms();
 
   return 0;
 }
