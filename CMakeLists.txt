@@ -11,7 +11,8 @@ include_directories(${CMAKE_SOURCE_DIR}/icecream-cpp)
 set(SOURCE_FILES Norm.hpp Game.hpp)
 
 add_executable(main_CESS.out main_CESS.cpp ${SOURCE_FILES})
-target_link_libraries(main_CESS.out PRIVATE OpenMP::OpenMP_CXX)
+
+add_executable(main_priv_sim.out main_priv_sim.cpp ${SOURCE_FILES})
 
 add_executable(test_Norm test_Norm.cpp Norm.hpp)
 

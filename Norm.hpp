@@ -26,6 +26,11 @@ enum class Reputation {
   G = 1    // good
 };
 
+Reputation FlipReputation(Reputation r) {
+  if (r == Reputation::G) { return Reputation::B; }
+  else { return Reputation::G; }
+}
+
 char A2C(Action a) {
   if (a == Action::D) { return 'd'; }
   else { return 'c'; }
@@ -67,6 +72,16 @@ class ActionRule {
     coop_probs[1] = actions.at({Reputation::B, Reputation::G});
     coop_probs[2] = actions.at({Reputation::G, Reputation::B});
     coop_probs[3] = actions.at({Reputation::G, Reputation::G});
+  }
+  ActionRule(const std::map<std::pair<Reputation,Reputation>,Action>& actions) {
+    // { (B,B,D), (B,G,C), (G,B,D), (G,G,C) }
+    if (actions.size() != 4) {
+      throw std::runtime_error("unspecified actions");
+    }
+    coop_probs[0] = actions.at({Reputation::B, Reputation::B}) == Action::C ? 1.0 : 0.0;
+    coop_probs[1] = actions.at({Reputation::B, Reputation::G}) == Action::C ? 1.0 : 0.0;
+    coop_probs[2] = actions.at({Reputation::G, Reputation::B}) == Action::C ? 1.0 : 0.0;
+    coop_probs[3] = actions.at({Reputation::G, Reputation::G}) == Action::C ? 1.0 : 0.0;
   }
 
   std::array<double,4> coop_probs; // P(C|B,B), P(C|B,G), P(C|G,B), P(C|G,G)
