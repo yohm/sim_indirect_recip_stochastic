@@ -9,6 +9,7 @@
 
 using Reputation::G, Reputation::B, Action::C, Action::D;
 
+
 class PrivateRepGame {
 public:
   using population_t = std::vector<std::pair<Norm, size_t>>;  // vector of StrategyID & its size
@@ -90,7 +91,7 @@ public:
   count_t GameCount() const { return game_count; }
 
   // system-wide cooperation level
-  double CooperationLevel() const {
+  double SystemWideCooperationLevel() const {
     double coop = 0.0;
     double total = 0.0;
     for (size_t i = 0; i < N; i++) {
@@ -100,6 +101,61 @@ public:
       }
     }
     return coop / total;
+  }
+
+  // donation levels of individuals
+  // <probability of receiving benefit, probability of paying cost>
+  // payoff
+  std::vector<std::pair<double,double>> IndividualCooperationLevels() const {
+    std::vector<std::pair<double,double>> coop_rates(N, {0.0, 0.0});
+    for (size_t i = 0; i < N; i++) {
+      double coop_total_out = 0.0, game_total_out = 0.0;
+      for (size_t j = 0; j < N; j++) {
+        if (i == j) {
+          continue;
+        }
+        coop_total_out += coop_count[i][j];
+        game_total_out += game_count[i][j];
+      }
+      double coop_total_in = 0.0, game_total_in = 0.0;
+      for (size_t j = 0; j < N; j++) {
+        if (i == j) {
+          continue;
+        }
+        coop_total_in += coop_count[j][i];
+        game_total_in += game_count[j][i];
+      }
+      coop_rates[i] = std::make_pair(coop_total_in / game_total_in, coop_total_out / game_total_out);
+    }
+    return coop_rates;
+  }
+
+  // norm-wise cooperation levels
+  // return: vector c_levels
+  //   c_levels[i][j] : cooperation level of i-th norm toward j-th norm
+  std::vector<std::vector<double>> NormCooperationLevels() const {
+    size_t n_norms = population.size();
+    std::vector<std::vector<size_t>> coop_by_norm(n_norms), total_by_norm(n_norms);
+    for (size_t i = 0; i < n_norms; i++) {
+      coop_by_norm[i].resize(n_norms, 0.0);
+        total_by_norm[i].resize(n_norms, 0.0);
+    }
+    for (size_t i = 0; i < N; i++) {
+      for (size_t j = 0; j < N; j++) {
+        size_t i_norm = norm_index[i];
+        size_t j_norm = norm_index[j];
+        coop_by_norm[i_norm][j_norm] += coop_count[i][j];
+        total_by_norm[i_norm][j_norm] += game_count[i][j];
+      }
+    }
+    std::vector<std::vector<double>> c_levels(n_norms);
+    for (size_t i = 0; i < n_norms; i++) {
+      c_levels[i].resize(n_norms, 0.0);
+      for (size_t j = 0; j < n_norms; j++) {
+        c_levels[i][j] = static_cast<double>(coop_by_norm[i][j]) / total_by_norm[i][j];
+      }
+    }
+    return c_levels;
   }
 
   // reset coop_count and game_count
@@ -135,6 +191,68 @@ private:
   double R01() { return uni(rnd); }
 };
 
+class EvolutionaryPrivateRepGame {
+public:
+  EvolutionaryPrivateRepGame(size_t N, const std::vector<Norm>& norms) : N(N), norms(norms) {};
+
+  const size_t N;
+  const std::vector<Norm> norms;
+
+  std::vector<std::vector<double>> FixationProbabilities(double benefit, double beta) const {
+    size_t num_norms = norms.size();
+    std::vector<std::vector<double>> rho(num_norms);
+    for (size_t i = 0; i < num_norms; i++) {
+      rho[i].resize(num_norms, 0.0);
+    }
+    for (size_t i = 0; i < num_norms; i++) {
+      for (size_t j = 0; j < num_norms; j++) {
+        rho[i][j] = FixationProbability(norms[i], norms[j], benefit, beta);
+      }
+    }
+    return rho;
+  }
+
+  // fixation probability of resident j against resident i
+  // i.e., the probability to change from i to j
+  double FixationProbability(const Norm& norm_i, const Norm& norm_j, double benefit, double beta) const {
+    std::vector<double> pi_i(N);  // pi_i[l]: payoff of resident i when l mutants exist
+    std::vector<double> pi_j(N);  // pi_j[l]: payoff of mutant j when l mutants exist
+
+    for (size_t l = 1; l < N; l++) {
+      PrivateRepGame game({{norm_i, N-l}, {norm_j, l}}, 123456789ull);
+      double q = 0.9, mu_percept = 0.05;
+      game.Update(1e6, q, mu_percept);
+      auto coop_levles = game.IndividualCooperationLevels();
+      double payoff_i_total = 0.0;
+      for (size_t k = 0; k < N-l; k++) {
+        payoff_i_total += benefit * coop_levles[k].first - coop_levles[k].second;
+      }
+      pi_i[l] = payoff_i_total / (N-l);
+      double payoff_j_total = 0.0;
+      for (size_t k = N-l; k < N; k++) {
+        payoff_j_total += benefit * coop_levles[k].first - coop_levles[k].second;
+      }
+      pi_j[l] = payoff_j_total / l;
+    }
+
+    double denom = 1.0;
+    // p_ij = 1 / (1 + sum_{l' != 1}^{N-1}  prod_{l=1}^{l_prime} exp{-beta * (pi_j[l] - pi_i[l]) }
+    for (size_t l_prime = 1; l_prime < N; l_prime++) {
+      double prod = 1.0;
+      for (size_t l = 1; l <= l_prime; l++) {
+        prod *= exp(-beta * (pi_j[l] - pi_i[l]));
+      }
+      denom += prod;
+    }
+    return 1.0 / denom;
+  }
+
+  std::vector<double> EquilibriumPopulationLowMut(double benefit, double beta) const {
+    // [TODO] implement me
+
+  }
+
+};
 
 int main() {
 
@@ -147,26 +265,24 @@ int main() {
 
   AssessmentRule Rd({
                         {{G,G,C}, 1.0}, {{G,G,D}, 0.0},
-                        {{G,B,C}, 0.5}, {{G,B,D}, 0.5},
+                        //{{G,B,C}, 0.5}, {{G,B,D}, 0.5},
+                        {{G,B,C}, 1.0}, {{G,B,D}, 0.5},
                         {{B,G,C}, 1.0}, {{B,G,D}, 0.0},
                         {{B,B,C}, 1.0}, {{B,B,D}, 1.0},
                     });
-  AssessmentRule Rr({
-                        {{G,G,C}, 1.0}, {{G,G,D}, 0.0},
-                        {{G,B,C}, 1.0}, {{G,B,D}, 0.0},
-                        {{B,G,C}, 1.0}, {{B,G,D}, 0.0},
-                        {{B,B,C}, 1.0}, {{B,B,D}, 0.0},
-                    });
+  // AssessmentRule Rr = AssessmentRule::ImageScoring();
+  AssessmentRule Rr = AssessmentRule::KeepRecipient();
 
   Norm norm(Rd, Rr, ar);
   Norm l3 = Norm::L3();
 
-  PrivateRepGame priv_game( {{l3, 90}}, 123456789ull);
+  PrivateRepGame priv_game( {{norm, 90}}, 123456789ull);
   priv_game.Update(1000000, 0.9, 0.05);
   // IC(priv_game.CoopCount(), priv_game.GameCount());
-  IC(priv_game.CooperationLevel());
-
+  IC(priv_game.SystemWideCooperationLevel());
   // priv_game.PrintImage(std::cerr);
+
+  EvolutionaryPrivateRepGame evol(100, {norm, Norm::AllC(), Norm::AllD()}, 123456789ull);
 
   return 0;
 }
