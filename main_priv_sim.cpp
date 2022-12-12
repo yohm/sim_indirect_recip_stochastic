@@ -24,7 +24,7 @@ public:
     }
     N = norms.size();
     M.resize(N);
-    for (size_t i = 0; i < N; i++) { M[i].resize(N, Reputation::G); }
+    for (size_t i = 0; i < N; i++) { M[i].assign(N, Reputation::G); }
     ResetCounts();
   }
 
@@ -58,10 +58,14 @@ public:
 
           // update donor's reputation
           double g_prob_donor = norms[obs].Rd.GProb(M[obs][donor], M[obs][recip], a_obs);
-          if (R01() < g_prob_donor) {
+          if (g_prob_donor == 1.0) {
             M[obs][donor] = Reputation::G;
-          } else {
+          }
+          else if (g_prob_donor == 0.0) {
             M[obs][donor] = Reputation::B;
+          }
+          else {
+            M[obs][donor] = (R01() < g_prob_donor) ? Reputation::G : Reputation::B;
           }
           if (mu_a > 0.0 && R01() < mu_a) {
             M[obs][donor] = FlipReputation(M[obs][donor]);
@@ -69,16 +73,31 @@ public:
 
           // update recipient's reputation
           double g_prob_recip = norms[obs].Rr.GProb(M[obs][recip], M[obs][donor], a_obs);
-          if (R01() < g_prob_recip) {
+          if (g_prob_recip == 1.0) {
               M[obs][recip] = Reputation::G;
-          } else {
+          }
+          else if (g_prob_recip == 0.0) {
               M[obs][recip] = Reputation::B;
+          }
+          else {
+              M[obs][recip] = (R01() < g_prob_recip) ? Reputation::G : Reputation::B;
           }
           if (mu_a > 0.0 && R01() < mu_a) {
             M[obs][recip] = FlipReputation(M[obs][recip]);
           }
         }
       }
+
+      // count good
+      for (size_t i = 0; i < N; i++) {
+        for (size_t j = 0; j < N; j++) {
+          if (M[i][j] == Reputation::G) {
+            good_count[i][j]++;
+          }
+        }
+      }
+      total_update++;
+
     }
   }
 
@@ -158,14 +177,46 @@ public:
     return c_levels;
   }
 
-  // reset coop_count and game_count
+  // norm-wise good count
+  // return: vector average reputation
+  //   c_levels[i][j] : average reputation of j-th norm from the viewpoint of i-th norm
+  std::vector<std::vector<double>> NormAverageReputation() const {
+    size_t n_norms = population.size();
+
+    std::vector<std::vector<double>> avg_rep(n_norms);
+    for (size_t i = 0; i < n_norms; i++) {
+      avg_rep[i].resize(n_norms, 0.0);
+    }
+
+    for (size_t i = 0; i < N; i++) {
+      for (size_t j = 0; j < N; j++) {
+        size_t i_norm = norm_index[i];
+        size_t j_norm = norm_index[j];
+        avg_rep[i_norm][j_norm] += good_count[i][j];
+      }
+    }
+
+    for (size_t i_norm = 0; i_norm < n_norms; i_norm++) {
+      for (size_t j_norm = 0; j_norm < n_norms; j_norm++) {
+        double size = population[i_norm].second * population[j_norm].second;
+        avg_rep[i_norm][j_norm] /= (size * total_update);
+      }
+    }
+
+    return avg_rep;
+  }
+
+
   void ResetCounts() {
     coop_count.resize(N);
     game_count.resize(N);
+    good_count.resize(N);
     for (size_t i = 0; i < N; i++) {
-      coop_count[i].resize(N, 0);
-      game_count[i].resize(N, 0);
+      coop_count[i].assign(N, 0);
+      game_count[i].assign(N, 0);
+      good_count[i].assign(N, 0);
     }
+    total_update = 0;
   }
 
   // print image matrix
@@ -188,6 +239,8 @@ private:
   std::vector<std::vector<Reputation> > M;
   count_t coop_count;  // number of C between i-donor and j-recipient
   count_t game_count;  // number of games between i-donor and j-recipient
+  count_t good_count;  // number of good reputations
+  size_t total_update; // number of time steps in total
   double R01() { return uni(rnd); }
 };
 
@@ -205,23 +258,30 @@ public:
       rho[i].resize(num_norms, 0.0);
     }
     for (size_t i = 0; i < num_norms; i++) {
-      for (size_t j = 0; j < num_norms; j++) {
-        rho[i][j] = FixationProbability(norms[i], norms[j], benefit, beta);
+      for (size_t j = i+1; j < num_norms; j++) {
+        auto rho_ij_ji = FixationProbability(norms[i], norms[j], benefit, beta);
+        rho[i][j] = rho_ij_ji.first;
+        rho[j][i] = rho_ij_ji.second;
       }
     }
     return rho;
   }
 
-  // fixation probability of resident j against resident i
-  // i.e., the probability to change from i to j
-  double FixationProbability(const Norm& norm_i, const Norm& norm_j, double benefit, double beta) const {
+  // first: fixation probability of resident j against resident i
+  //        i.e., the probability to change from i to j
+  // second: fixation probability of resident i against resident j
+  //        i.e., the probability to change from j to i
+  std::pair<double,double> FixationProbability(const Norm& norm_i, const Norm& norm_j, double benefit, double beta) const {
     std::vector<double> pi_i(N);  // pi_i[l]: payoff of resident i when l mutants exist
     std::vector<double> pi_j(N);  // pi_j[l]: payoff of mutant j when l mutants exist
 
+    #pragma omp parallel for schedule(dynamic) shared(pi_i, pi_j)
     for (size_t l = 1; l < N; l++) {
       PrivateRepGame game({{norm_i, N-l}, {norm_j, l}}, 123456789ull);
       double q = 0.9, mu_percept = 0.05;
       game.Update(1e6, q, mu_percept);
+      game.ResetCounts();
+      game.Update(9e6, q, mu_percept);
       auto coop_levles = game.IndividualCooperationLevels();
       double payoff_i_total = 0.0;
       for (size_t k = 0; k < N-l; k++) {
@@ -233,56 +293,80 @@ public:
         payoff_j_total += benefit * coop_levles[k].first - coop_levles[k].second;
       }
       pi_j[l] = payoff_j_total / l;
+      IC(l, pi_i[l], pi_j[l]);
     }
+    std::cerr << "============" << std::endl;
 
-    double denom = 1.0;
+    double rho_1_inv = 1.0;
     // p_ij = 1 / (1 + sum_{l' != 1}^{N-1}  prod_{l=1}^{l_prime} exp{-beta * (pi_j[l] - pi_i[l]) }
     for (size_t l_prime = 1; l_prime < N; l_prime++) {
       double prod = 1.0;
       for (size_t l = 1; l <= l_prime; l++) {
         prod *= exp(-beta * (pi_j[l] - pi_i[l]));
       }
-      denom += prod;
+      rho_1_inv += prod;
     }
-    return 1.0 / denom;
+    double rho_1 = 1.0 / rho_1_inv;
+
+    double rho_2_inv = 1.0;
+    for (size_t l_prime = 1; l_prime < N; l_prime++) {
+      double prod = 1.0;
+      for (size_t l = 1; l <= l_prime; l++) {
+        prod *= exp(-beta * (pi_i[N-l] - pi_j[N-l]));
+      }
+      rho_2_inv += prod;
+    }
+    double rho_2 = 1.0 / rho_2_inv;
+    return std::make_pair(rho_1, rho_2);
   }
 
   std::vector<double> EquilibriumPopulationLowMut(double benefit, double beta) const {
     // [TODO] implement me
-
+    return {};
   }
 
 };
 
 int main() {
 
-  ActionRule ar({
-                    {{G,G}, C},
-                    {{G,B}, D},
-                    {{B,G}, C},
-                    {{B,B}, D},
-                });
+  // ActionRule ar({
+  //                   {{G,G}, C},
+  //                   {{G,B}, D},
+  //                   {{B,G}, C},
+  //                   {{B,B}, D},
+  //               });
 
-  AssessmentRule Rd({
-                        {{G,G,C}, 1.0}, {{G,G,D}, 0.0},
-                        //{{G,B,C}, 0.5}, {{G,B,D}, 0.5},
-                        {{G,B,C}, 1.0}, {{G,B,D}, 0.5},
-                        {{B,G,C}, 1.0}, {{B,G,D}, 0.0},
-                        {{B,B,C}, 1.0}, {{B,B,D}, 1.0},
-                    });
+  // AssessmentRule Rd({
+  //                       {{G,G,C}, 1.0}, {{G,G,D}, 0.0},
+  //                       //{{G,B,C}, 0.5}, {{G,B,D}, 0.5},
+  //                       {{G,B,C}, 1.0}, {{G,B,D}, 1.0},
+  //                       {{B,G,C}, 1.0}, {{B,G,D}, 0.0},
+  //                       {{B,B,C}, 1.0}, {{B,B,D}, 1.0},
+  //                   });
   // AssessmentRule Rr = AssessmentRule::ImageScoring();
-  AssessmentRule Rr = AssessmentRule::KeepRecipient();
+  // AssessmentRule Rr = AssessmentRule::KeepRecipient();
 
-  Norm norm(Rd, Rr, ar);
-  Norm l3 = Norm::L3();
+  // Norm norm(Rd, Rr, ar);
+  // Norm norm = Norm::L1();
+  // norm.Rr = AssessmentRule::ImageScoring();
 
-  PrivateRepGame priv_game( {{norm, 90}}, 123456789ull);
-  priv_game.Update(1000000, 0.9, 0.05);
-  // IC(priv_game.CoopCount(), priv_game.GameCount());
-  IC(priv_game.SystemWideCooperationLevel());
+  // PrivateRepGame priv_game( {{norm, 90}}, 123456789ull);
+  // priv_game.Update(1000000, 0.9, 0.05);
+  // // IC(priv_game.CoopCount(), priv_game.GameCount());
+  // IC(priv_game.SystemWideCooperationLevel());
+
+  IC(Norm::L1().Inspect());
+  PrivateRepGame priv_game( {{Norm::L1(), 30}, {Norm::AllC(), 30}, {Norm::AllD(), 30}}, 123456789ull);
+  priv_game.Update(1e6, 0.9, 0.05);
+  priv_game.ResetCounts();
+  priv_game.Update(1e6, 0.9, 0.05);
+  IC( priv_game.NormCooperationLevels(), priv_game.NormAverageReputation() );
   // priv_game.PrintImage(std::cerr);
 
-  EvolutionaryPrivateRepGame evol(100, {norm, Norm::AllC(), Norm::AllD()}, 123456789ull);
+  // EvolutionaryPrivateRepGame evol(50, {Norm::L1(), Norm::AllC(), Norm::AllD()});
+  // EvolutionaryPrivateRepGame evol(10, {Norm::L7(), Norm::L1()});
+  // auto rhos = evol.FixationProbabilities(5.0, 1.0);
+  // IC(rhos);
 
   return 0;
 }
