@@ -3,6 +3,7 @@
 #include <icecream.hpp>
 #include <vector>
 #include <random>
+#include <Eigen/Dense>
 #include "Norm.hpp"
 #include "Game.hpp"
 
@@ -30,7 +31,7 @@ public:
   // t_max : number of steps
   // q : observation probability
   // epsilon :
-  void Update(size_t t_max, double q, double mu_percept) {
+  void Update(size_t t_max, double q, double mu_percept, bool count_good = true) {
     for (size_t t = 0; t < t_max; t++) {
       // randomly choose donor & recipient
       size_t donor = static_cast<size_t>(R01() * N);
@@ -80,14 +81,16 @@ public:
       }
 
       // count good
-      for (size_t i = 0; i < N; i++) {
-        for (size_t j = 0; j < N; j++) {
-          if (M[i][j] == Reputation::G) {
-            good_count[i][j]++;
+      if (count_good) {
+        for (size_t i = 0; i < N; i++) {
+          for (size_t j = 0; j < N; j++) {
+            if (M[i][j] == Reputation::G) {
+              good_count[i][j]++;
+            }
           }
         }
+        total_update++;
       }
-      total_update++;
 
     }
   }
@@ -229,6 +232,7 @@ public:
   const size_t N;
   const std::vector<Norm> norms;
 
+  // rho[i][j] = fixation probability of a j-mutant into i-resident community
   std::vector<std::vector<double>> FixationProbabilities(double benefit, double beta) const {
     size_t num_norms = norms.size();
     std::vector<std::vector<double>> rho(num_norms, std::vector<double>(num_norms, 0.0));
@@ -240,6 +244,7 @@ public:
         rho[j][i] = rho_ij_ji.second;
       }
     }
+
     return rho;
   }
 
@@ -255,9 +260,9 @@ public:
     for (size_t l = 1; l < N; l++) {
       PrivateRepGame game({{norm_i, N-l}, {norm_j, l}}, 123456789ull);
       double q = 0.9, mu_percept = 0.05;
-      game.Update(1e6, q, mu_percept);
+      game.Update(1e6, q, mu_percept, false);
       game.ResetCounts();
-      game.Update(9e6, q, mu_percept);
+      game.Update(1e6, q, mu_percept, false);
       auto coop_levles = game.IndividualCooperationLevels();
       double payoff_i_total = 0.0;
       for (size_t k = 0; k < N-l; k++) {
@@ -296,9 +301,40 @@ public:
     return std::make_pair(rho_1, rho_2);
   }
 
-  std::vector<double> EquilibriumPopulationLowMut(double benefit, double beta) const {
-    // [TODO] implement me
-    return {};
+  // arg: transition probability matrix p
+  //      p[i][j] : fixation probability of a j-mutant into i-resident
+  // return: stationary distribution vector
+  std::vector<double> EquilibriumPopulationLowMut(const std::vector<std::vector<double>>& fixation_probs) const {
+    size_t num_norms = fixation_probs.size();
+
+    // construct transition matrix
+    Eigen::MatrixXd T(num_norms, num_norms);
+
+    // std::vector<std::vector<double>> T(num_norms, std::vector<double>(num_norms, 0.0));
+    for (size_t i = 0; i < num_norms; i++) {
+      double sum = 0.0;
+      for (size_t j = 0; j < num_norms; j++) {
+        if (i == j) continue;
+        T(j,i) = fixation_probs[i][j] / (1.0 - num_norms);
+        sum += T(j, i);
+      }
+      T(i,i) = - sum;  // T(i,i) = 1.0 - sum; but we subtract I to calculate stationary distribution
+    }
+    for (size_t i = 0; i < num_norms; i++) {  // normalization condition
+      T(num_norms-1, i) += 1.0;
+    }
+
+    Eigen::VectorXd b(num_norms);
+    for (int i = 0; i < num_norms-1; i++) { b(i) = 0.0; }
+    b(num_norms-1) = 1.0;
+
+    Eigen::VectorXd x = T.colPivHouseholderQr().solve(b);
+
+    std::vector<double> ans(num_norms, 0.0);
+    for (int i = 0; i < num_norms; i++) {
+      ans[i] = x(i);
+    }
+    return ans;
   }
 
 };
@@ -331,6 +367,7 @@ int main() {
   // // IC(priv_game.CoopCount(), priv_game.GameCount());
   // IC(priv_game.SystemWideCooperationLevel());
 
+  /*
   IC(Norm::L1().Inspect());
   PrivateRepGame priv_game( {{Norm::L1(), 30}, {Norm::AllC(), 30}, {Norm::AllD(), 30}}, 123456789ull);
   priv_game.Update(1e6, 0.9, 0.05);
@@ -338,11 +375,13 @@ int main() {
   priv_game.Update(1e6, 0.9, 0.05);
   IC( priv_game.NormCooperationLevels(), priv_game.NormAverageReputation() );
   // priv_game.PrintImage(std::cerr);
+   */
 
-  // EvolutionaryPrivateRepGame evol(50, {Norm::L1(), Norm::AllC(), Norm::AllD()});
-  // EvolutionaryPrivateRepGame evol(10, {Norm::L7(), Norm::L1()});
-  // auto rhos = evol.FixationProbabilities(5.0, 1.0);
-  // IC(rhos);
+  EvolutionaryPrivateRepGame evol(50, {Norm::L7(), Norm::AllC(), Norm::AllD()});
+  auto rhos = evol.FixationProbabilities(5.0, 1.0);
+  IC(rhos);
+  auto eq = evol.EquilibriumPopulationLowMut(rhos);
+  IC(eq);
 
   return 0;
 }
