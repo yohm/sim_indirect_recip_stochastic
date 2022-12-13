@@ -31,7 +31,7 @@ public:
   // t_max : number of steps
   // q : observation probability
   // epsilon :
-  void Update(size_t t_max, double q, double mu_percept, double mu_e = 0.0, double mu_a = 0.0) {
+  void Update(size_t t_max, double q, double mu_percept) {
     for (size_t t = 0; t < t_max; t++) {
       // randomly choose donor & recipient
       size_t donor = static_cast<size_t>(R01() * N);
@@ -39,9 +39,7 @@ public:
       assert(donor != recip);
 
       double c_prob = norms[donor].P.CProb(M[donor][donor], M[donor][recip]);
-      Action A = (R01() < c_prob) ? Action::C : Action::D;
-      // implementation error
-      if(mu_e > 0.0 && R01() < mu_e) { A = Action::D; }
+      Action A = (c_prob == 1.0 || R01() < c_prob) ? Action::C : Action::D;
 
       if (A == Action::C) {
         coop_count[donor][recip]++;
@@ -67,12 +65,9 @@ public:
           else {
             M[obs][donor] = (R01() < g_prob_donor) ? Reputation::G : Reputation::B;
           }
-          if (mu_a > 0.0 && R01() < mu_a) {
-            M[obs][donor] = FlipReputation(M[obs][donor]);
-          }
 
           // update recipient's reputation
-          double g_prob_recip = norms[obs].Rr.GProb(M[obs][recip], M[obs][donor], a_obs);
+          double g_prob_recip = norms[obs].Rr.GProb(M[obs][donor], M[obs][recip], a_obs);
           if (g_prob_recip == 1.0) {
               M[obs][recip] = Reputation::G;
           }
@@ -81,9 +76,6 @@ public:
           }
           else {
               M[obs][recip] = (R01() < g_prob_recip) ? Reputation::G : Reputation::B;
-          }
-          if (mu_a > 0.0 && R01() < mu_a) {
-            M[obs][recip] = FlipReputation(M[obs][recip]);
           }
         }
       }
