@@ -23,8 +23,7 @@ public:
       }
     }
     N = norms.size();
-    M.resize(N);
-    for (size_t i = 0; i < N; i++) { M[i].assign(N, Reputation::G); }
+    M.assign(N, std::vector<Reputation>(N, Reputation::G));
     ResetCounts();
   }
 
@@ -146,11 +145,8 @@ public:
   //   c_levels[i][j] : cooperation level of i-th norm toward j-th norm
   std::vector<std::vector<double>> NormCooperationLevels() const {
     size_t n_norms = population.size();
-    std::vector<std::vector<size_t>> coop_by_norm(n_norms), total_by_norm(n_norms);
-    for (size_t i = 0; i < n_norms; i++) {
-      coop_by_norm[i].resize(n_norms, 0.0);
-        total_by_norm[i].resize(n_norms, 0.0);
-    }
+    std::vector<std::vector<size_t>> coop_by_norm(n_norms, std::vector<size_t>(n_norms, 0) );
+    std::vector<std::vector<size_t>> total_by_norm(n_norms, std::vector<size_t>(n_norms, 0) );
     for (size_t i = 0; i < N; i++) {
       for (size_t j = 0; j < N; j++) {
         size_t i_norm = norm_index[i];
@@ -159,11 +155,10 @@ public:
         total_by_norm[i_norm][j_norm] += game_count[i][j];
       }
     }
-    std::vector<std::vector<double>> c_levels(n_norms);
-    for (size_t i = 0; i < n_norms; i++) {
-      c_levels[i].resize(n_norms, 0.0);
-      for (size_t j = 0; j < n_norms; j++) {
-        c_levels[i][j] = static_cast<double>(coop_by_norm[i][j]) / total_by_norm[i][j];
+    std::vector<std::vector<double>> c_levels(n_norms, std::vector<double>(n_norms, 0.0));
+    for (size_t i_norm = 0; i_norm < n_norms; i_norm++) {
+      for (size_t j_norm = 0; j_norm < n_norms; j_norm++) {
+        c_levels[i_norm][j_norm] = static_cast<double>(coop_by_norm[i_norm][j_norm]) / static_cast<double>(total_by_norm[i_norm][j_norm]);
       }
     }
     return c_levels;
@@ -174,11 +169,7 @@ public:
   //   c_levels[i][j] : average reputation of j-th norm from the viewpoint of i-th norm
   std::vector<std::vector<double>> NormAverageReputation() const {
     size_t n_norms = population.size();
-
-    std::vector<std::vector<double>> avg_rep(n_norms);
-    for (size_t i = 0; i < n_norms; i++) {
-      avg_rep[i].resize(n_norms, 0.0);
-    }
+    std::vector<std::vector<double>> avg_rep(n_norms, std::vector<double>(n_norms, 0.0));
 
     for (size_t i = 0; i < N; i++) {
       for (size_t j = 0; j < N; j++) {
@@ -190,8 +181,8 @@ public:
 
     for (size_t i_norm = 0; i_norm < n_norms; i_norm++) {
       for (size_t j_norm = 0; j_norm < n_norms; j_norm++) {
-        double size = population[i_norm].second * population[j_norm].second;
-        avg_rep[i_norm][j_norm] /= (size * total_update);
+        size_t c = population[i_norm].second * population[j_norm].second * total_update;
+        avg_rep[i_norm][j_norm] /= static_cast<double>(c);
       }
     }
 
@@ -200,14 +191,9 @@ public:
 
 
   void ResetCounts() {
-    coop_count.resize(N);
-    game_count.resize(N);
-    good_count.resize(N);
-    for (size_t i = 0; i < N; i++) {
-      coop_count[i].assign(N, 0);
-      game_count[i].assign(N, 0);
-      good_count[i].assign(N, 0);
-    }
+    coop_count.assign(N, std::vector<size_t>(N, 0));
+    game_count.assign(N, std::vector<size_t>(N, 0));
+    good_count.assign(N, std::vector<size_t>(N, 0));
     total_update = 0;
   }
 
@@ -245,10 +231,8 @@ public:
 
   std::vector<std::vector<double>> FixationProbabilities(double benefit, double beta) const {
     size_t num_norms = norms.size();
-    std::vector<std::vector<double>> rho(num_norms);
-    for (size_t i = 0; i < num_norms; i++) {
-      rho[i].resize(num_norms, 0.0);
-    }
+    std::vector<std::vector<double>> rho(num_norms, std::vector<double>(num_norms, 0.0));
+
     for (size_t i = 0; i < num_norms; i++) {
       for (size_t j = i+1; j < num_norms; j++) {
         auto rho_ij_ji = FixationProbability(norms[i], norms[j], benefit, beta);
