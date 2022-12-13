@@ -69,13 +69,13 @@ public:
           // update recipient's reputation
           double g_prob_recip = norms[obs].Rr.GProb(M[obs][donor], M[obs][recip], a_obs);
           if (g_prob_recip == 1.0) {
-              M[obs][recip] = Reputation::G;
+            M[obs][recip] = Reputation::G;
           }
           else if (g_prob_recip == 0.0) {
-              M[obs][recip] = Reputation::B;
+            M[obs][recip] = Reputation::B;
           }
           else {
-              M[obs][recip] = (R01() < g_prob_recip) ? Reputation::G : Reputation::B;
+            M[obs][recip] = (R01() < g_prob_recip) ? Reputation::G : Reputation::B;
           }
         }
       }
@@ -377,7 +377,19 @@ int main() {
   // priv_game.PrintImage(std::cerr);
    */
 
-  EvolutionaryPrivateRepGame evol(50, {Norm::L7(), Norm::AllC(), Norm::AllD()});
+  Norm norm = Norm::L3();
+  // norm.Rd.SetGProb(G, B, D, 0.5);
+  // norm.Rd.SetGProb(G, B, C, 0.5);
+  norm.Rr = AssessmentRule::ImageScoring();
+  // norm.Rr = AssessmentRule::KeepRecipient();
+
+  PrivateRepGame priv_game( {{norm, 50}}, 123456789ull);
+  priv_game.Update(1e6, 0.9, 0.05, false);
+  priv_game.ResetCounts();
+  priv_game.Update(1e6, 0.9, 0.05, false);
+  IC( priv_game.NormCooperationLevels() );
+
+  EvolutionaryPrivateRepGame evol(50, {norm, Norm::AllC(), Norm::AllD()});
   auto rhos = evol.FixationProbabilities(5.0, 1.0);
   IC(rhos);
   auto eq = evol.EquilibriumPopulationLowMut(rhos);
