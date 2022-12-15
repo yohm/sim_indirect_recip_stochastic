@@ -65,11 +65,11 @@ void test_LeadingEight() {
 
 void test_SelectionMutationEquilibrium() {
   Norm norm = Norm::L1();
-  EvolutionaryPrivateRepGame::SimulationParameters params;
+  EvolPrivRepGame::SimulationParameters params;
   params.n_init = 1e5;
   params.n_steps = 1e5;
 
-  EvolutionaryPrivateRepGame evol(50, {norm, Norm::AllC(), Norm::AllD()}, params);
+  EvolPrivRepGame evol(50, {norm, Norm::AllC(), Norm::AllD()}, params);
   auto rhos = evol.FixationProbabilities(5.0, 1.0);
   IC(rhos);
   assert( IsClose(rhos[0][1], 0.097, 0.02) );

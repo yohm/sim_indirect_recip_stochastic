@@ -61,9 +61,9 @@ int main() {
   priv_game.Update(1e6, 0.9, 0.05, false);
   IC( priv_game.NormCooperationLevels() );
 
-  EvolutionaryPrivateRepGame::SimulationParameters params;
+  EvolPrivRepGame::SimulationParameters params;
 
-  EvolutionaryPrivateRepGame evol(50, {norm, Norm::AllC(), Norm::AllD()}, params);
+  EvolPrivRepGame evol(50, {norm, Norm::AllC(), Norm::AllD()}, params);
   auto rhos = evol.FixationProbabilities(5.0, 1.0);
   IC(rhos);
   auto eq = evol.EquilibriumPopulationLowMut(rhos);

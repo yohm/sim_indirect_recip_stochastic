@@ -219,7 +219,7 @@ private:
 };
 
 
-class EvolutionaryPrivateRepGame {
+class EvolPrivRepGame {
 public:
   struct SimulationParameters {
     SimulationParameters(size_t n_init = 1e6, size_t n_steps = 1e6, double q = 0.9, double mu_percept = 0.05, uint64_t seed = 123456789ull) :
@@ -230,7 +230,7 @@ public:
     uint64_t seed;  // random number seed
   };
 
-  EvolutionaryPrivateRepGame(size_t N, const std::vector<Norm>& norms, const SimulationParameters& sim_param) :
+  EvolPrivRepGame(size_t N, const std::vector<Norm>& norms, const SimulationParameters& sim_param) :
       N(N), norms(norms), param(sim_param) {};
 
   const size_t N;
