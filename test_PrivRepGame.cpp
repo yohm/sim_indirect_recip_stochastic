@@ -5,7 +5,7 @@
 
 
 template <typename T>
-bool IsAllClose(T a, T b, double epsilon = 1.0e-6) {
+bool IsAllClose(T a, T b, double epsilon = 0.02) {
   for (size_t i = 0; i < a.size(); i++) {
     if (std::abs(a[i] - b[i]) > epsilon) {
       return false;
@@ -14,11 +14,9 @@ bool IsAllClose(T a, T b, double epsilon = 1.0e-6) {
   return true;
 }
 
-bool IsClose(double a, double b, double epsilon = 1.0e-6) {
+bool IsClose(double a, double b, double epsilon = 0.02) {
   return std::abs(a - b) < epsilon;
 }
-
-using Reputation::G, Reputation::B, Action::C, Action::D;
 
 void test_SelfCooperationLevel(const Norm& norm, double expected_c_level, double expected_good_rep) {
   PrivateRepGame priv_game( {{norm, 50}}, 123456789ull);
@@ -65,10 +63,31 @@ void test_LeadingEight() {
   std::cerr << "test L8 passed" << std::endl;
 }
 
+void test_SelectionMutationEquilibrium() {
+  Norm norm = Norm::L1();
+  EvolutionaryPrivateRepGame::SimulationParameters params;
+  params.n_init = 1e5;
+  params.n_steps = 1e5;
+
+  EvolutionaryPrivateRepGame evol(50, {norm, Norm::AllC(), Norm::AllD()}, params);
+  auto rhos = evol.FixationProbabilities(5.0, 1.0);
+  IC(rhos);
+  assert( IsClose(rhos[0][1], 0.097, 0.02) );
+  assert( IsClose(rhos[0][2], 0.000, 0.02) );
+  assert( IsClose(rhos[1][0], 0.012, 0.02) );
+  assert( IsClose(rhos[2][0], 0.043, 0.02) );
+  auto eq = evol.EquilibriumPopulationLowMut(rhos);
+  IC(eq);
+  assert(IsAllClose(eq, {0.30, 0.04, 0.66}, 0.02) );
+
+  std::cerr << "test_SelectionMutationEquilibrium passed" << std::endl;
+}
+
 
 int main() {
   test_RandomNorm();
   test_LeadingEight();
 
+  test_SelectionMutationEquilibrium();
   return 0;
 }

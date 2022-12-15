@@ -7,7 +7,8 @@
 #include "PublicRepGame.hpp"
 
 
-using Reputation::G, Reputation::B, Action::C, Action::D;
+constexpr Reputation B = Reputation::B, G = Reputation::G;
+constexpr Action C = Action::C, D = Action::D;
 
 std::pair<bool,std::array<double,2>> CheckCESS(const Norm& norm, double mu_a_recip = 1.0e-3) {
   const double mu_e = 1.0e-3, mu_a_donor = 1.0e-3;

@@ -56,7 +56,9 @@ public:
     // + (1-h)^2{ R1(B,B) + R2(B,B) }
     // -2h(t)
 
-    using Reputation::G, Reputation::B, Action::C, Action::D;
+    constexpr Reputation B = Reputation::B, G = Reputation::G;
+    constexpr Action C = Action::C, D = Action::D;
+
     double R1_BB = P(B, B) * R1(B, B, C) + (1.0 - P(B, B)) * R1(B, B, D);
     double R1_BG = P(B, G) * R1(B, G, C) + (1.0 - P(B, G)) * R1(B, G, D);
     double R1_GB = P(G, B) * R1(G, B, C) + (1.0 - P(G, B)) * R1(G, B, D);
@@ -155,7 +157,8 @@ public:
   }
 
   std::pair<double,double> MutantCooperationProbs(const ActionRule& mut) const {
-    using Reputation::B, Reputation::G, Action::C, Action::D;
+    constexpr Reputation B = Reputation::B, G = Reputation::G;
+    constexpr Action C = Action::C, D = Action::D;
     double H_star = MutantEqReputation(mut);
     const ActionRule Pmut = mut.RescaleWithError(mu_e);
     double pc_res_mut = h_star * H_star * P(G, G)
@@ -173,7 +176,8 @@ public:
     // H^{\ast} =
     //   h^{\ast} [ R_1(B,G,P') + R_2(G,B,P) ] + (1-h^{\ast}) [ R_1(B,B,P') + R_2(B,B,P)
     //   / { 2 - h^{\ast} [R_1(G,G,P') + R_2(G,G,P) - R_1(B,G,P') - R_2(G,B,P) ] - (1-h^{\ast}) [ R_1(G,B,P') + R_2(B,G,P) - R_1(B,B,P') - R_2(B,B,P)] }.
-    using Reputation::B, Reputation::G, Action::C, Action::D;
+    constexpr Reputation B = Reputation::B, G = Reputation::G;
+    constexpr Action C = Action::C, D = Action::D;
     const ActionRule Pmut = mut.RescaleWithError(mu_e);
     auto Pm = [Pmut](Reputation X, Reputation Y)->double { return Pmut.CProb(X, Y); };
 

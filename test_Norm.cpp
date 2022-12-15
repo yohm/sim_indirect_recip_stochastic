@@ -5,7 +5,8 @@
 #include "Norm.hpp"
 
 
-using Reputation::G, Reputation::B, Action::C, Action::D;
+constexpr Reputation B = Reputation::B, G = Reputation::G;
+constexpr Action C = Action::C, D = Action::D;
 
 template <typename T>
 bool IsAllClose(T a, T b, double epsilon = 0.0001) {
