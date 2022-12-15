@@ -404,6 +404,11 @@ public:
                 AssessmentRule::KeepRecipient(),
                 ActionRule::DISC());
   }
+  static Norm Random() {
+    return Norm( AssessmentRule{{0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5}},
+                 AssessmentRule{{0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5}},
+                 ActionRule{{0.5, 0.5, 0.5, 0.5}});
+  }
   static Norm L1() {
     return Norm({{0, 1, 0, 1, 1, 1, 0, 1}},
                 AssessmentRule::KeepRecipient(),
