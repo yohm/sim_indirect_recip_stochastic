@@ -204,9 +204,9 @@ public:
   void PrintImage(std::ostream& out) const {
     for (size_t i = 0; i < N; i++) {
       for (size_t j = 0; j < N; j++) {
-        out << M[i][j] << " ";
+        out << ((M[i][j]==Reputation::G)?'.':'x');
       }
-      out << std::endl;
+      out << "\n";
     }
   }
 
@@ -377,6 +377,7 @@ int main() {
   // priv_game.PrintImage(std::cerr);
    */
 
+  /*
   Norm norm = Norm::L3();
   // norm.Rd.SetGProb(G, B, D, 0.5);
   // norm.Rd.SetGProb(G, B, C, 0.5);
@@ -394,6 +395,18 @@ int main() {
   IC(rhos);
   auto eq = evol.EquilibriumPopulationLowMut(rhos);
   IC(eq);
+   */
 
+  // random norm
+  ActionRule ar({ {{G,G}, 0.5}, {{G,B}, 0.5}, {{B,G}, 0.5}, {{B,B}, 0.5}, });
+  AssessmentRule Rd({ {{G,G,C}, 0.5}, {{G,G,D}, 0.5}, {{G,B,C}, 0.5}, {{G,B,D}, 0.5}, {{B,G,C}, 0.5}, {{B,G,D}, 0.5}, {{B,B,C}, 0.5}, {{B,B,D}, 0.5}, });
+  AssessmentRule Rr({ {{G,G,C}, 0.5}, {{G,G,D}, 0.5}, {{G,B,C}, 0.5}, {{G,B,D}, 0.5}, {{B,G,C}, 0.5}, {{B,G,D}, 0.5}, {{B,B,C}, 0.5}, {{B,B,D}, 0.5}, });
+  Norm norm(Rd, Rr, ar);
+  PrivateRepGame priv_game( {{norm, 50}}, 123456789ull);
+  priv_game.Update(1e6, 0.9, 0.05, false);
+  priv_game.ResetCounts();
+  priv_game.Update(1e6, 0.9, 0.05, false);
+  IC( priv_game.NormCooperationLevels() );
+  priv_game.PrintImage(std::cout);
   return 0;
 }
