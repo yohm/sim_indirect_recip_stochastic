@@ -5,7 +5,7 @@
 #include <random>
 #include <Eigen/Dense>
 #include "Norm.hpp"
-#include "Game.hpp"
+#include "PublicRepGame.hpp"
 
 
 using Reputation::G, Reputation::B, Action::C, Action::D;

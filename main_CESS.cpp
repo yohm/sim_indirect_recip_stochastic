@@ -4,14 +4,14 @@
 #include <map>
 #include <random>
 #include "Norm.hpp"
-#include "Game.hpp"
+#include "PublicRepGame.hpp"
 
 
 using Reputation::G, Reputation::B, Action::C, Action::D;
 
 std::pair<bool,std::array<double,2>> CheckCESS(const Norm& norm, double mu_a_recip = 1.0e-3) {
   const double mu_e = 1.0e-3, mu_a_donor = 1.0e-3;
-  Game game(mu_e, mu_a_donor, mu_a_recip, norm);
+  PublicRepGame game(mu_e, mu_a_donor, mu_a_recip, norm);
   auto brange = game.ESSBenefitRange();
   bool isCESS = game.pc_res_res > 0.98 && brange[0] < 1.05 && brange[1] > 100;
   // IC(brange);
@@ -363,7 +363,7 @@ Norm MakeNormFromTable(std::array<Action,4> actions, std::array<double,8> r1, st
 bool CompareAnalyticNumericalBranges(const Norm& norm) {
   std::cerr << norm.Inspect();
   auto brange1 = AnalyticBenefitRange(norm);
-  auto brange2 = Game(1.0e-6, 1.0e-6, 1.0e-6, norm).ESSBenefitRange();
+  auto brange2 = PublicRepGame(1.0e-6, 1.0e-6, 1.0e-6, norm).ESSBenefitRange();
   IC(brange1, brange2);
   double th = 3.0e-2;
   if (brange1[0] > brange1[1]) {
@@ -378,7 +378,7 @@ void FindMutant() {
   norm.Rr.SetGProb(Reputation::G, Reputation::B, Action::D, 1.0);
 
   const double mu_e = 1.0e-2, mu_a_donor = 1.0e-2, mu_a_recip = 1.0e-2;
-  Game game(mu_e, mu_a_donor, mu_a_recip, norm);
+  PublicRepGame game(mu_e, mu_a_donor, mu_a_recip, norm);
   auto brange = game.ESSBenefitRange();
   IC(brange);
 
@@ -441,7 +441,7 @@ void RandomCheckAnalyticNorms() {
   for (auto& norm : unpassed) {
     bool b = CompareAnalyticNumericalBranges(norm);
     std::cerr << "-----------------------------------------------------------\n";
-    std::cerr << Game(1.0e-6, 1.0e-6, 1.0e-6, norm).Inspect();
+    std::cerr << PublicRepGame(1.0e-6, 1.0e-6, 1.0e-6, norm).Inspect();
     std::cerr << "-----------------------------------------------------------\n\n";
   }
 

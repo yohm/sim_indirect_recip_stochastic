@@ -1,7 +1,7 @@
 #include <iostream>
 #include <cassert>
 #include <icecream.hpp>
-#include "Game.hpp"
+#include "PublicRepGame.hpp"
 
 
 template <typename T>
@@ -23,7 +23,7 @@ void test_L8() {
   std::vector<Norm>
       norms = {Norm::L1(), Norm::L2(), Norm::L3(), Norm::L4(), Norm::L5(), Norm::L6(), Norm::L7(), Norm::L8()};
   for (auto n : norms) {
-    Game g(mu_e, mu_a_donor, mu_a_recip, n);
+    PublicRepGame g(mu_e, mu_a_donor, mu_a_recip, n);
     std::cerr << g.r_norm.Inspect();
     IC(g.h_star, g.pc_res_res);
     assert(g.h_star > 0.97);
@@ -57,7 +57,7 @@ void test_L8() {
 void test_ImageScoring() {
   double mu_e = 0.001, mu_a_donor = 0.001, mu_a_recip = 0.001;
   Norm is = Norm::ImageScoring();
-  Game g(mu_e, mu_a_donor, mu_a_recip, is);
+  PublicRepGame g(mu_e, mu_a_donor, mu_a_recip, is);
   std::cerr << "IS: " << g.r_norm.Inspect();
   IC(g.h_star, g.pc_res_res);
   bool h = IsClose(g.h_star, 0.40, 0.01 );

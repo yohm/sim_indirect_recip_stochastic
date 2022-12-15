@@ -9,7 +9,7 @@ find_package(OpenMP REQUIRED)
 find_package(Eigen3 REQUIRED)
 include_directories(${CMAKE_SOURCE_DIR}/icecream-cpp)
 
-set(SOURCE_FILES Norm.hpp Game.hpp)
+set(SOURCE_FILES Norm.hpp PublicRepGame.hpp)
 
 add_executable(main_CESS.out main_CESS.cpp ${SOURCE_FILES})
 
@@ -18,4 +18,4 @@ target_link_libraries(main_priv_sim.out OpenMP::OpenMP_CXX Eigen3::Eigen)
 
 add_executable(test_Norm test_Norm.cpp Norm.hpp)
 
-add_executable(test_Game test_Game.cpp Game.hpp Norm.hpp)
+add_executable(test_PublicRepGame test_PublicRepGame.cpp PublicRepGame.hpp Norm.hpp)

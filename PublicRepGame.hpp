@@ -9,9 +9,9 @@
 #include <icecream.hpp>
 #include "Norm.hpp"
 
-class Game {
+class PublicRepGame {
 public:
-  Game(double mu_e, double mu_a_donor, double mu_a_recip, const Norm& norm) :
+  PublicRepGame(double mu_e, double mu_a_donor, double mu_a_recip, const Norm& norm) :
   mu_e(mu_e), mu_a_donor(mu_a_donor), mu_a_recip(mu_a_recip), norm(norm), r_norm(norm.RescaleWithError(mu_e, mu_a_donor, mu_a_recip)) {
     h_star = ResidentEqReputation();
     pc_res_res = h_star * h_star * r_norm.CProb(Reputation::G, Reputation::G)
@@ -21,7 +21,7 @@ public:
   }
   std::string Inspect() const {
     std::stringstream ss;
-    ss << "Game:" << std::endl
+    ss << "PublicRepGame:" << std::endl
        << "(mu_e, mu_a_donor, mu_a_recip): (" << mu_e << ", " << mu_a_donor << ", " << mu_a_recip << ")" << std::endl
        << "(Norm): " << norm.Inspect()
        << "(c_prob,h*): " << pc_res_res << ' ' << h_star << std::endl;
