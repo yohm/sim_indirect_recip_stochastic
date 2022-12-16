@@ -97,10 +97,28 @@ void test_SelectionMutationEquilibrium() {
   std::cerr << "Elapsed time: " << elapsed.count() << " s\n";
 }
 
+void test_SelectionMutationEquilibrium2() {
+  auto start = std::chrono::high_resolution_clock::now();
+
+  Norm norm = Norm::L1();
+  EvolPrivRepGame::SimulationParameters params;
+  params.n_init = 1e6;
+  params.n_steps = 1e6;
+
+  double eq_c = EvolPrivRepGame::EquilibriumCoopLevelAllCAlLD(50, norm, params, 5.0, 1.0);
+  IC(eq_c);
+
+  auto end = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double> elapsed = end - start;
+  std::cerr << "Elapsed time: " << elapsed.count() << " s\n";
+
+}
+
 
 int main() {
   // test_RandomNorm();
-  test_LeadingEight();
+  // test_LeadingEight();
   test_SelectionMutationEquilibrium();
+  test_SelectionMutationEquilibrium2();
   return 0;
 }

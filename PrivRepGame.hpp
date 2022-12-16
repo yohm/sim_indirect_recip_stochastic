@@ -233,6 +233,150 @@ public:
   EvolPrivRepGame(size_t N, const std::vector<Norm>& norms, const SimulationParameters& sim_param) :
       N(N), norms(norms), param(sim_param) {};
 
+  static double EquilibriumCoopLevelAllCAllD(size_t N, const Norm& norm, const SimulationParameters& param, double benefit, double selection_strength) {
+    std::vector<double> pi_x_allc(N, 0.0), pi_allc(N, 0.0), pi_x_alld(N, 0.0), pi_alld(N, 0.0);
+    double self_coop_level;
+    // pi_x_allc[l] : payoff of X against AllC when there are l AllC and (N-l) residents
+    // pi_allc[l]   : payoff of AllC against X when there are l AllC and (N-l) residents
+    // pi_x_alld[l] : payoff of X against AllD when there are l AllD and (N-l) residents
+    // pi_alld[l]   : payoff of AllD against X when there are l AllD and (N-l) residents
+
+    #pragma omp parallel for schedule(dynamic)
+    for (size_t i = 0; i < 2*N-1; i++) {
+      if (i == 0) {  // monomorphic population of X
+        PrivateRepGame game({{norm, N}}, param.seed);
+        game.Update(param.n_init, param.q, param.mu_percept, false);
+        game.ResetCounts();
+        game.Update(param.n_steps, param.q, param.mu_percept, false);
+        self_coop_level = game.SystemWideCooperationLevel();
+        pi_x_allc[0] = pi_x_alld[0] = self_coop_level * (benefit - 1.0);
+      }
+      else if (i < N) {
+        size_t l = i;
+        // (N-l) X vs l AllC
+        PrivateRepGame game({{norm, N-l}, {Norm::AllC(), l}}, param.seed);
+        game.Update(param.n_init, param.q, param.mu_percept, false);
+        game.ResetCounts();
+        game.Update(param.n_steps, param.q, param.mu_percept, false);
+        auto coop_levels = game.IndividualCooperationLevels();
+        double payoff_i_total = 0.0;
+        for (size_t k = 0; k < N-l; k++) {
+          payoff_i_total += benefit * coop_levels[k].first - coop_levels[k].second;
+        }
+        pi_x_allc[l] = payoff_i_total / (N-l);
+        double payoff_j_total = 0.0;
+        for (size_t k = N-l; k < N; k++) {
+          payoff_j_total += benefit * coop_levels[k].first - coop_levels[k].second;
+        }
+        pi_allc[l] = payoff_j_total / l;
+      }
+      else if (i >= N) {
+        // (N-l) X vs l AllD
+        size_t l = i - N + 1;
+        PrivateRepGame game({{norm, N-l}, {Norm::AllD(), l}}, param.seed);
+        game.Update(param.n_init, param.q, param.mu_percept, false);
+        game.ResetCounts();
+        game.Update(param.n_steps, param.q, param.mu_percept, false);
+        auto coop_levels = game.IndividualCooperationLevels();
+        double payoff_i_total = 0.0;
+        for (size_t k = 0; k < N-l; k++) {
+          payoff_i_total += benefit * coop_levels[k].first - coop_levels[k].second;
+        }
+        pi_x_alld[l] = payoff_i_total / (N-l);
+        double payoff_j_total = 0.0;
+        for (size_t k = N-l; k < N; k++) {
+          payoff_j_total += benefit * coop_levels[k].first - coop_levels[k].second;
+        }
+        pi_alld[l] = payoff_j_total / l;
+      }
+    }
+    IC(pi_x_allc, pi_allc, pi_x_alld, pi_alld);
+
+    // calculate the fixation probabilities
+    std::vector<std::vector<double>> rho(3, std::vector<double>(3, 0.0));
+
+    {
+      // the probability that X is fixed in a population of AllC
+      // p_ij = 1 / (1 + sum_{l' != 1}^{N-1}  prod_{l=1}^{l_prime} exp{-beta * (pi_j[l] - pi_i[l]) }
+      double rho_inv = 1.0;
+      for (size_t l_prime = 1; l_prime < N; l_prime++) {
+        double prod = 1.0;
+        for (size_t l = 1; l <= l_prime; l++) {
+          prod *= exp(-selection_strength * (pi_allc[l] - pi_x_allc[l]));
+        }
+        rho_inv += prod;
+      }
+      rho[0][1] = 1.0 / rho_inv;
+    }
+    {
+      // the probability that X is fixed in a population of AllD
+      double rho_inv = 1.0;
+      for (size_t l_prime = 1; l_prime < N; l_prime++) {
+        double prod = 1.0;
+        for (size_t l = 1; l <= l_prime; l++) {
+          prod *= exp(-selection_strength * (pi_alld[l] - pi_x_alld[l]));
+        }
+        rho_inv += prod;
+      }
+      rho[0][2] = 1.0 / rho_inv;
+    }
+    {
+      // the probability that AllC is fixed in a population of X
+      double rho_inv = 1.0;
+      for (size_t l_prime = 1; l_prime < N; l_prime++) {
+        double prod = 1.0;
+        for (size_t l = 1; l <= l_prime; l++) {
+          prod *= exp(-selection_strength * (pi_x_allc[N-l] - pi_allc[N-l]));
+        }
+        rho_inv += prod;
+      }
+      rho[1][0] = 1.0 / rho_inv;
+    }
+    {
+      // the probability that AllD is fixed in a population of X
+      double rho_inv = 1.0;
+      for (size_t l_prime = 1; l_prime < N; l_prime++) {
+        double prod = 1.0;
+        for (size_t l = 1; l <= l_prime; l++) {
+          prod *= exp(-selection_strength * (pi_x_alld[N-l] - pi_alld[N-l]));
+        }
+        rho_inv += prod;
+      }
+      rho[2][0] = 1.0 / rho_inv;
+    }
+    {
+      // the probability that AllD is fixed in a population of AllC
+      double rho_inv = 1.0;
+      for (size_t l_prime = 1; l_prime < N; l_prime++) {
+        double prod = 1.0;
+        for (size_t l = 1; l <= l_prime; l++) {
+          prod *= exp(-selection_strength * (+1.0));
+        }
+        rho_inv += prod;
+      }
+      rho[1][2] = 1.0 / rho_inv;
+    }
+    {
+      // the probability that AllC is fixed in a population of AllD
+      double rho_inv = 1.0;
+      for (size_t l_prime = 1; l_prime < N; l_prime++) {
+        double prod = 1.0;
+        for (size_t l = 1; l <= l_prime; l++) {
+          prod *= exp(-selection_strength * (-1.0));
+        }
+        rho_inv += prod;
+      }
+      rho[2][1] = 1.0 / rho_inv;
+    }
+    IC(rho);
+
+    // calculate the equilibrium populations
+    auto eq = EquilibriumPopulationLowMut(rho);
+    IC(eq);
+
+    return eq[0] * self_coop_level + eq[1];
+  };
+
   const size_t N;
   const std::vector<Norm> norms;
   SimulationParameters param;
@@ -308,7 +452,7 @@ public:
   // arg: transition probability matrix p
   //      p[i][j] : fixation probability of a j-mutant into i-resident
   // return: stationary distribution vector
-  std::vector<double> EquilibriumPopulationLowMut(const std::vector<std::vector<double>>& fixation_probs) const {
+  static std::vector<double> EquilibriumPopulationLowMut(const std::vector<std::vector<double>>& fixation_probs) {
     size_t num_norms = fixation_probs.size();
 
     // construct transition matrix
