@@ -102,16 +102,27 @@ void test_SelectionMutationEquilibrium2() {
 
   Norm norm = Norm::L1();
   EvolPrivRepGame::SimulationParameters params;
-  params.n_init = 1e6;
-  params.n_steps = 1e6;
+  params.n_init = 1e5;
+  params.n_steps = 1e5;
 
-  double eq_c = EvolPrivRepGame::EquilibriumCoopLevelAllCAlLD(50, norm, params, 5.0, 1.0);
-  IC(eq_c);
+  auto selfc_rho_eq = EvolPrivRepGame::EquilibriumCoopLevelAllCAllD(50, norm, params, 5.0, 1.0);
+  double self_cooperation_level = std::get<0>(selfc_rho_eq);
+  auto rhos = std::get<1>(selfc_rho_eq);
+  auto eq = std::get<2>(selfc_rho_eq);
+
+  IC(self_cooperation_level);
+  assert( IsClose(self_cooperation_level, 0.90, 0.02) );
+  IC(rhos);
+  assert( IsClose(rhos[0][1], 0.097, 0.02) );
+  assert( IsClose(rhos[0][2], 0.000, 0.02) );
+  assert( IsClose(rhos[1][0], 0.012, 0.02) );
+  assert( IsClose(rhos[2][0], 0.043, 0.02) );
+  IC(eq);
+  assert(IsAllClose(eq, {0.30, 0.04, 0.66}, 0.02) );
 
   auto end = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> elapsed = end - start;
   std::cerr << "Elapsed time: " << elapsed.count() << " s\n";
-
 }
 
 
