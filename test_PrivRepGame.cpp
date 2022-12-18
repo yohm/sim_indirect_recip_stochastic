@@ -105,7 +105,10 @@ void test_SelectionMutationEquilibrium2() {
   params.n_init = 1e5;
   params.n_steps = 1e5;
 
-  auto selfc_rho_eq = EvolPrivRepGame::EquilibriumCoopLevelAllCAllD(50, norm, params, 5.0, 1.0);
+  auto rho_allc_alld = EvolPrivRepGame::FixationProbsAllCAllD(50, params, 5.0, 1.0);
+  IC(rho_allc_alld);
+
+  auto selfc_rho_eq = EvolPrivRepGame::EquilibriumCoopLevelAllCAllD(50, norm, params, 5.0, 1.0, rho_allc_alld.first, rho_allc_alld.second);
   double self_cooperation_level = std::get<0>(selfc_rho_eq);
   auto rhos = std::get<1>(selfc_rho_eq);
   auto eq = std::get<2>(selfc_rho_eq);
@@ -129,7 +132,7 @@ void test_SelectionMutationEquilibrium2() {
 int main() {
   // test_RandomNorm();
   // test_LeadingEight();
-  test_SelectionMutationEquilibrium();
+  // test_SelectionMutationEquilibrium();
   test_SelectionMutationEquilibrium2();
   return 0;
 }

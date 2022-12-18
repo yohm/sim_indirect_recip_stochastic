@@ -233,8 +233,63 @@ public:
   EvolPrivRepGame(size_t N, const std::vector<Norm>& norms, const SimulationParameters& sim_param) :
       N(N), norms(norms), param(sim_param) {};
 
+  // fixation probability between AllC and AllD
+  static std::pair<double,double> FixationProbsAllCAllD(size_t N, const SimulationParameters& param, double benefit, double selection_strength) {
+    const Norm allc = Norm::AllC(), alld = Norm::AllD();
+
+    // payoff when there are i AllC and N-i AllD players
+    std::vector<double> pi_allc(N, 0.0), pi_alld(N, 0.0);
+
+    #pragma omp parallel for schedule(dynamic)
+    for (size_t i = 1; i < N; i++) {
+      // i AllC vs N-i AllD
+      PrivateRepGame game({{allc, i}, {alld, N-i}}, param.seed);
+      game.Update(param.n_init, param.q, param.mu_percept, false);
+      game.ResetCounts();
+      game.Update(param.n_steps, param.q, param.mu_percept, false);
+      auto coop_levels = game.IndividualCooperationLevels();
+      double payoff_i_total = 0.0;
+      for (size_t k = 0; k < i; k++) {
+        payoff_i_total += benefit * coop_levels[k].first - coop_levels[k].second;
+      }
+      pi_allc[i] = payoff_i_total / i;
+      double payoff_j_total = 0.0;
+      for (size_t k = i; k < N; k++) {
+        payoff_j_total += benefit * coop_levels[k].first - coop_levels[k].second;
+      }
+      pi_alld[i] = payoff_j_total / (N-i);
+    }
+    IC(pi_allc, pi_alld);
+
+    // the probability that X is fixed in a population of AllC
+    // p_ij = 1 / (1 + sum_{l' != 1}^{N-1}  prod_{l=1}^{l_prime} exp{-beta * (pi_j[l] - pi_i[l]) }
+    double rho_inv = 1.0;
+    for (size_t l_prime = 1; l_prime < N; l_prime++) {
+      double prod = 1.0;
+      for (size_t l = 1; l <= l_prime; l++) {
+        prod *= exp(-selection_strength * (pi_allc[l] - pi_alld[l]));
+      }
+      rho_inv += prod;
+    }
+    double rho_allc = 1.0 / rho_inv;
+
+    rho_inv = 1.0;
+    for (size_t l_prime = 1; l_prime < N; l_prime++) {
+      double prod = 1.0;
+      for (size_t l = 1; l <= l_prime; l++) {
+        prod *= exp(-selection_strength * (pi_alld[N-l] - pi_allc[N-l]));
+      }
+      rho_inv += prod;
+    }
+    double rho_alld = 1.0 / rho_inv;
+
+    return std::make_pair(rho_allc, rho_alld);
+  }
+
   // return self-cooperation-level, rho, equilibrium population
-  static std::tuple<double,std::vector<std::vector<double>>,std::vector<double>> EquilibriumCoopLevelAllCAllD(size_t N, const Norm& norm, const SimulationParameters& param, double benefit, double selection_strength) {
+  static std::tuple<double,std::vector<std::vector<double>>,std::vector<double>> EquilibriumCoopLevelAllCAllD(
+      size_t N, const Norm& norm, const SimulationParameters& param, double benefit, double selection_strength,
+      double rho_allc_alld, double rho_alld_allc ) {
     std::vector<double> pi_x_allc(N, 0.0), pi_allc(N, 0.0), pi_x_alld(N, 0.0), pi_alld(N, 0.0);
     double self_coop_level;
     // pi_x_allc[l] : payoff of X against AllC when there are l AllC and (N-l) residents
@@ -346,29 +401,10 @@ public:
       rho[2][0] = 1.0 / rho_inv;
     }
     {
-      // the probability that AllD is fixed in a population of AllC
-      double rho_inv = 1.0;
-      for (size_t l_prime = 1; l_prime < N; l_prime++) {
-        double prod = 1.0;
-        for (size_t l = 1; l <= l_prime; l++) {
-          prod *= exp(-selection_strength * (+1.0));
-        }
-        rho_inv += prod;
-      }
-      rho[1][2] = 1.0 / rho_inv;
-      rho[1][2] = 0.668;   // [TODO] temporary fix
+      rho[1][2] = rho_alld_allc;
     }
     {
-      // the probability that AllC is fixed in a population of AllD
-      double rho_inv = 1.0;
-      for (size_t l_prime = 1; l_prime < N; l_prime++) {
-        double prod = 1.0;
-        for (size_t l = 1; l <= l_prime; l++) {
-          prod *= exp(-selection_strength * (-1.0));
-        }
-        rho_inv += prod;
-      }
-      rho[2][1] = 1.0 / rho_inv;
+      rho[2][1] = rho_allc_alld;
     }
 
     // calculate the equilibrium populations
