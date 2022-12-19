@@ -206,10 +206,28 @@ void test_Norm() {
 }
 
 
-int main() {
-  test_ActionRule();
-  test_AssessmentRule();
-  test_Norm();
+int main(int argc, char** argv) {
+  if (argc == 1) {
+    test_ActionRule();
+    test_AssessmentRule();
+    test_Norm();
+  }
+  else if (argc == 2) {
+    int id = std::stoi(argv[1]);
+    Norm n = Norm::ConstructFromID(id);
+    std::cout << n.Inspect();
+  }
+  else if (argc == 21) {
+    std::array<double,20> serialized;
+    for (size_t i = 0; i < 20; i++) {
+      serialized[i] = std::stod(argv[i+1]);
+    }
+    Norm n = Norm::FromSerialized(serialized);
+    std::cout << n.Inspect();
+  }
+  else {
+    std::cout << "Usage: " << argv[0] << " [id] [c1 c2 c3 c4 g1 g2 g3 g4 g5 g6 g7 g8 r1 r2 r3 r4]" << std::endl;
+  }
 
   return 0;
 }
