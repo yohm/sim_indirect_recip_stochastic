@@ -107,7 +107,6 @@ void test_SelectionMutationEquilibrium2() {
   EvolPrivRepGameAllCAllD evol(50, params, 5.0, 1.0);
 
   auto selfc_rho_eq = evol.EquilibriumCoopLevelAllCAllD(Norm::L1());
-  // auto selfc_rho_eq = EvolPrivRepGame::EquilibriumCoopLevelAllCAllD(50, norm, params, 5.0, 1.0, rho_allc_alld.first, rho_allc_alld.second);
   double self_cooperation_level = std::get<0>(selfc_rho_eq);
   auto rhos = std::get<1>(selfc_rho_eq);
   auto eq = std::get<2>(selfc_rho_eq);
@@ -127,11 +126,50 @@ void test_SelectionMutationEquilibrium2() {
   std::cerr << "Elapsed time: " << elapsed.count() << " s\n";
 }
 
+void PrintSelectionMutationEquilibrium(const Norm& norm) {
+  auto start = std::chrono::high_resolution_clock::now();
 
-int main() {
-  test_RandomNorm();
-  test_LeadingEight();
-  test_SelectionMutationEquilibrium();
-  test_SelectionMutationEquilibrium2();
+  EvolPrivRepGame::SimulationParameters params;
+  params.n_init = 1e5;
+  params.n_steps = 1e5;
+
+  EvolPrivRepGameAllCAllD evol(50, params, 5.0, 1.0);
+
+  auto selfc_rho_eq = evol.EquilibriumCoopLevelAllCAllD(norm);
+  double self_cooperation_level = std::get<0>(selfc_rho_eq);
+  auto rhos = std::get<1>(selfc_rho_eq);
+  auto eq = std::get<2>(selfc_rho_eq);
+
+  IC(self_cooperation_level, rhos, eq);
+
+  auto end = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double> elapsed = end - start;
+  std::cerr << "Elapsed time: " << elapsed.count() << " s\n";
+}
+
+int main(int argc, char *argv[]) {
+
+  if (argc == 1) {
+    test_RandomNorm();
+    test_LeadingEight();
+    test_SelectionMutationEquilibrium();
+    test_SelectionMutationEquilibrium2();
+  }
+  else if (argc == 2) {
+    int id = std::stoi(argv[1]);
+    Norm n = Norm::ConstructFromID(id);
+    std::cout << n.Inspect();
+    PrintSelectionMutationEquilibrium(n);
+  }
+  else if (argc == 21) {
+    std::array<double,20> serialized;
+    for (size_t i = 0; i < 20; i++) {
+      serialized[i] = std::stod(argv[i+1]);
+    }
+    Norm n = Norm::FromSerialized(serialized);
+    std::cout << n.Inspect();
+    PrintSelectionMutationEquilibrium(n);
+  }
+
   return 0;
 }
