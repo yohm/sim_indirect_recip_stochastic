@@ -302,6 +302,14 @@ public:
   Norm(const AssessmentRule &R_d, const AssessmentRule &R_r, const ActionRule &act)
       : Rd(R_d.good_probs), Rr(R_r.good_probs), P(act.coop_probs) {};
   Norm(const Norm &rhs) : Rd(rhs.Rd), Rr(rhs.Rr), P(rhs.P) {};
+  static Norm FromSerialized(const std::array<double,20>& serialized) {
+    std::array<double,8> Rd_serialized, Rr_serialized;
+    std::copy(serialized.begin(), serialized.begin()+8, Rd_serialized.begin());
+    std::copy(serialized.begin()+8, serialized.begin()+16, Rr_serialized.begin());
+    std::array<double,4> P_serialized;
+    std::copy(serialized.begin()+16, serialized.begin()+20, P_serialized.begin());
+    return Norm{AssessmentRule{Rd_serialized}, AssessmentRule{Rr_serialized}, ActionRule{P_serialized}};
+  }
   AssessmentRule Rd, Rr;  // assessment rules to assess donor and recipient
   ActionRule P;  // action rule
   std::string Inspect() const {
@@ -337,6 +345,17 @@ public:
          << "recip_gprob (c:" << gr_prob_c << ",d:" << gr_prob_d << ")\n";
     }
     return ss.str();
+  }
+  std::array<double,20> Serialize() const {
+    std::array<double,20> out;
+    for (size_t i = 0; i < 8; i++) {
+      out[i] = Rd.good_probs[i];
+      out[i+8] = Rr.good_probs[i];
+    }
+    for (size_t i = 0; i < 4; i++) {
+      out[i+16] = P.coop_probs[i];
+    }
+    return out;
   }
   double CProb(Reputation donor, Reputation recipient) const { return P.CProb(donor, recipient); }
   double GProbDonor(Reputation donor, Reputation recipient, Action act) const {

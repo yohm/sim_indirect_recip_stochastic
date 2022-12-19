@@ -387,7 +387,7 @@ public:
       }
       pi_alld[i] = payoff_j_total / (N-i);
     }
-    IC(pi_allc, pi_alld);
+    // IC(pi_allc, pi_alld);
 
     // the probability that X is fixed in a population of AllC
     // p_ij = 1 / (1 + sum_{l' != 1}^{N-1}  prod_{l=1}^{l_prime} exp{-beta * (pi_j[l] - pi_i[l]) }

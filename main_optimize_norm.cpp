@@ -12,6 +12,25 @@
 
 using namespace pagmo;
 
+double EquilibriumCoopLevel(const std::array<double,20>& norm_vec) {
+  EvolPrivRepGame::SimulationParameters params;
+  params.n_init = 1e4;
+  params.n_steps = 4e4;
+
+  Norm norm = Norm::FromSerialized(norm_vec);
+
+  EvolPrivRepGameAllCAllD evol(30, params, 5.0, 1.0);
+
+  auto selfc_rho_eq = evol.EquilibriumCoopLevelAllCAllD(norm);
+  double self_cooperation_level = std::get<0>(selfc_rho_eq);
+  auto eq = std::get<2>(selfc_rho_eq);
+
+  double c = self_cooperation_level * eq[0] + 1.0 * eq[1];
+  IC(c);
+  return c;
+}
+
+
 int main(int argc, char* argv[]) {
 
   MPI_Init(&argc, &argv);
@@ -22,10 +41,13 @@ int main(int argc, char* argv[]) {
   struct my_problem {
 
     // Implementation of the objective function.
-    vector_double fitness(const vector_double &dv) const
-    {
-      // [TODO] implement me
-      return {0.0};
+    vector_double fitness(const vector_double &dv) const {
+      std::array<double,20> norm_vec;
+      for (int i = 0; i < 20; ++i) {
+          norm_vec[i] = dv[i];
+      }
+      double coop_level = EquilibriumCoopLevel(norm_vec);
+      return {-coop_level}; // pagmo solves minimization problem
     }
 
     vector_double batch_fitness(const vector_double& dvs) const {
@@ -59,7 +81,7 @@ int main(int argc, char* argv[]) {
     // Implementation of the box bounds.
     std::pair<vector_double, vector_double> get_bounds() const
     {
-      constexpr size_t input_dim = 12;
+      constexpr size_t input_dim = 20;
       return {std::vector<double>(input_dim, 0.0), std::vector<double>(input_dim, 1.0)};
     }
   };
