@@ -7,6 +7,8 @@ set(CMAKE_CXX_STANDARD 17)
 
 find_package(OpenMP REQUIRED)
 find_package(Eigen3 REQUIRED)
+find_package(MPI REQUIRED)
+find_package(pagmo REQUIRED)
 include_directories(${CMAKE_SOURCE_DIR}/icecream-cpp)
 
 set(SOURCE_FILES Norm.hpp PublicRepGame.hpp)
@@ -22,3 +24,6 @@ add_executable(test_PublicRepGame test_PublicRepGame.cpp PublicRepGame.hpp Norm.
 
 add_executable(test_PrivRepGame test_PrivRepGame.cpp PrivRepGame.hpp Norm.hpp)
 target_link_libraries(test_PrivRepGame OpenMP::OpenMP_CXX Eigen3::Eigen)
+
+add_executable(main_optimize_norm main_optimize_norm.cpp Norm.hpp PrivRepGame.hpp)
+target_link_libraries(main_optimize_norm OpenMP::OpenMP_CXX Eigen3::Eigen MPI::MPI_CXX Pagmo::pagmo)
