@@ -15,7 +15,7 @@ using namespace pagmo;
 double EquilibriumCoopLevel(const std::array<double,20>& norm_vec) {
   EvolPrivRepGame::SimulationParameters params;
   params.n_init = 1e4;
-  params.n_steps = 4e4;
+  params.n_steps = 1e4;
 
   Norm norm = Norm::FromSerialized(norm_vec);
 
