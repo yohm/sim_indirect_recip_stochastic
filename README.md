@@ -5,6 +5,7 @@
 - MPI
 - Eigen3
 - pagmo
+- nlohmann-json
 
 Install these prerequisites by homebrwe if you are on macOS.
 
@@ -14,6 +15,7 @@ brew install libomp
 brew install open-mpi
 brew install eigen
 brew install pagmo
+brew install nlohmann-json
 ```
 
 # Build
