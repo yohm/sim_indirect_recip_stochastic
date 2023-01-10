@@ -7,7 +7,7 @@
 - pagmo
 - nlohmann-json
 
-Install these prerequisites by homebrwe if you are on macOS.
+Install these prerequisites by homebrew if you are on macOS.
 
 ```bash
 brew install cmake

@@ -279,7 +279,7 @@ public:
         payoff_j_total += benefit * coop_levles[k].first - coop_levles[k].second;
       }
       pi_j[l] = payoff_j_total / l;
-      IC(l, pi_i[l], pi_j[l]);
+      // IC(l, pi_i[l], pi_j[l]);
     }
     std::cerr << "============" << std::endl;
 

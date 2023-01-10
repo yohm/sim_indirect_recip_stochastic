@@ -148,6 +148,29 @@ void PrintSelectionMutationEquilibrium(const Norm& norm) {
   std::cerr << "Elapsed time: " << elapsed.count() << " s\n";
 }
 
+void CompareWithLocalMutants(const Norm& norm) {
+  EvolPrivRepGame::SimulationParameters params;
+  params.n_init = 1e5;
+  params.n_steps = 1e5;
+
+  for (int i = 0; i < 20; i++) {
+    auto serialized = norm.Serialize();
+    const double delta = 0.1;
+    if (serialized[i] + delta < 1.0) {
+      serialized[i] += delta;
+    }
+    else {
+      serialized[i] -= delta;
+    }
+    Norm mutant = Norm::FromSerialized(serialized);
+    std::cout << mutant.Inspect();
+    EvolPrivRepGame evol(50, {norm, mutant}, params);
+    auto rhos = evol.FixationProbabilities(5.0, 1.0);
+    auto eq = evol.EquilibriumPopulationLowMut(rhos);
+    IC(eq);
+  }
+}
+
 int main(int argc, char *argv[]) {
 
   if (argc == 1) {
@@ -163,13 +186,14 @@ int main(int argc, char *argv[]) {
     PrintSelectionMutationEquilibrium(n);
   }
   else if (argc == 21) {
-    std::array<double,20> serialized;
+    std::array<double,20> serialized = {};
     for (size_t i = 0; i < 20; i++) {
       serialized[i] = std::stod(argv[i+1]);
     }
     Norm n = Norm::FromSerialized(serialized);
     std::cout << n.Inspect();
     PrintSelectionMutationEquilibrium(n);
+    CompareWithLocalMutants(n);
   }
 
   return 0;
