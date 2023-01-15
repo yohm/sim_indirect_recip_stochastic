@@ -1,4 +1,5 @@
 #include <iostream>
+#include <regex>
 #include <cassert>
 #include <icecream.hpp>
 #include "PublicRepGame.hpp"
@@ -100,9 +101,17 @@ int main(int argc, char* argv[]) {
     test_ImageScoring();
   }
   else if (argc == 2) {
-    int id = std::stoi(argv[1]);
-    Norm n = Norm::ConstructFromID(id);
-    PrintESSRange(n);
+    std::regex re_d(R"(\d+)"); // regex for digits
+    if (std::regex_match(argv[1], re_d)) {
+      int id = std::stoi(argv[1]);
+      Norm n = Norm::ConstructFromID(id);
+      PrintESSRange(n);
+    }
+    // if second argument is a string and is contained in the second of Norm::NormNames
+    else {
+      Norm n = Norm::ConstructFromName(argv[1]);
+      PrintESSRange(n);
+    }
   }
   else if (argc == 21) {
     std::array<double,20> serialized;

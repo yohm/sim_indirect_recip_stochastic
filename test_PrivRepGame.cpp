@@ -1,6 +1,7 @@
 #include <iostream>
 #include <cassert>
 #include <chrono>
+#include <regex>
 #include <icecream.hpp>
 #include <nlohmann/json.hpp>
 #include "PrivRepGame.hpp"
@@ -180,10 +181,17 @@ int main(int argc, char *argv[]) {
     test_SelectionMutationEquilibrium2();
   }
   else if (argc == 2) {
-    int id = std::stoi(argv[1]);
-    Norm n = Norm::ConstructFromID(id);
-    std::cout << n.Inspect();
-    PrintSelectionMutationEquilibrium(n);
+    std::regex re_d(R"(\d+)"); // regex for digits
+    if (std::regex_match(argv[1], re_d)) {
+      int id = std::stoi(argv[1]);
+      Norm n = Norm::ConstructFromID(id);
+      PrintSelectionMutationEquilibrium(n);
+    }
+    // if second argument is a string and is contained in the second of Norm::NormNames
+    else {
+      Norm n = Norm::ConstructFromName(argv[1]);
+      PrintSelectionMutationEquilibrium(n);
+    }
   }
   else if (argc == 21) {
     std::array<double,20> serialized = {};
