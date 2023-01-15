@@ -76,10 +76,46 @@ void test_ImageScoring() {
   std::cout << "test_ImageScoring passed!" << std::endl;
 }
 
+void PrintESSRange(const Norm& norm) {
+  double mu_e = 0.001, mu_a_donor = 0.001, mu_a_recip = 0.001;
+  PublicRepGame g(mu_e, mu_a_donor, mu_a_recip, norm);
+  std::cerr << g.r_norm.Inspect();
+  std::cerr << "h*: " << g.h_star << ", pc_res_res: " << g.pc_res_res << std::endl;
 
-int main() {
-  test_L8();
-  test_ImageScoring();
+  ActionRule alld = ActionRule::ALLD();
+  auto br_alld = g.StableBenefitRangeAgainstMutant(alld);
+  std::cerr << "stable benefit range against ALLD: " << br_alld[0] << ", " << br_alld[1] << std::endl;
+  ActionRule allc = ActionRule::ALLC();
+  auto br_allc = g.StableBenefitRangeAgainstMutant(allc);
+  std::cerr << "stable benefit range against ALLC: " << br_alld[0] << ", " << br_alld[1] << std::endl;
+
+  auto br = g.ESSBenefitRange();
+  std::cerr << "ESS b_range: " << br[0] << ", " << br[1] << std::endl;
+}
+
+
+int main(int argc, char* argv[]) {
+  if (argc == 1) {
+    test_L8();
+    test_ImageScoring();
+  }
+  else if (argc == 2) {
+    int id = std::stoi(argv[1]);
+    Norm n = Norm::ConstructFromID(id);
+    PrintESSRange(n);
+  }
+  else if (argc == 21) {
+    std::array<double,20> serialized;
+    for (size_t i = 0; i < 20; i++) {
+      serialized[i] = std::stod(argv[i+1]);
+    }
+    Norm n = Norm::FromSerialized(serialized);
+    PrintESSRange(n);
+  }
+  else {
+    std::cerr << "Unsupported usage" << std::endl;
+    return 1;
+  }
 
   return 0;
 }
