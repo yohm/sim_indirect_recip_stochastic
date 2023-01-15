@@ -484,6 +484,22 @@ public:
     }
     return "";
   }
+  static Norm ConstructFromName(const std::string &name) {
+    auto found = std::find_if(Norm::NormNames.begin(), Norm::NormNames.end(), [&](auto &s) {
+      return s.second == name;
+    });
+    if (found != Norm::NormNames.end()) {
+      return Norm::ConstructFromID(found->first);
+    }
+    else {
+      std::cerr << "Unknown norm: " << name << std::endl;
+      std::cerr << "Available norms are: " << std::endl;
+      for (auto &n : Norm::NormNames) {
+        std::cerr << "\t" << n.second << std::endl;
+      }
+      throw std::runtime_error("Unknown norm");
+    }
+  }
   std::string SimilarNorm() const {
     // return the named norm that differs only in R2
     if (P.IsDeterministic() && Rd.IsDeterministic()) {
