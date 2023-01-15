@@ -14,10 +14,13 @@ include_directories(${CMAKE_SOURCE_DIR}/icecream-cpp)
 
 set(SOURCE_FILES Norm.hpp PublicRepGame.hpp)
 
-add_executable(main_CESS.out main_CESS.cpp Norm.hpp PublicRepGame.hpp)
+add_executable(main_public_rep.out main_public_rep.cpp Norm.hpp PublicRepGame.hpp)
 
 add_executable(main_priv_sim.out main_priv_sim.cpp Norm.hpp PrivRepGame.hpp)
 target_link_libraries(main_priv_sim.out OpenMP::OpenMP_CXX Eigen3::Eigen)
+
+add_executable(main_optimize_norm main_optimize_norm.cpp Norm.hpp PrivRepGame.hpp)
+target_link_libraries(main_optimize_norm OpenMP::OpenMP_CXX Eigen3::Eigen MPI::MPI_CXX Pagmo::pagmo)
 
 add_executable(test_Norm test_Norm.cpp Norm.hpp)
 
@@ -25,6 +28,3 @@ add_executable(test_PublicRepGame test_PublicRepGame.cpp PublicRepGame.hpp Norm.
 
 add_executable(test_PrivRepGame test_PrivRepGame.cpp PrivRepGame.hpp Norm.hpp)
 target_link_libraries(test_PrivRepGame OpenMP::OpenMP_CXX Eigen3::Eigen nlohmann_json::nlohmann_json)
-
-add_executable(main_optimize_norm main_optimize_norm.cpp Norm.hpp PrivRepGame.hpp)
-target_link_libraries(main_optimize_norm OpenMP::OpenMP_CXX Eigen3::Eigen MPI::MPI_CXX Pagmo::pagmo)
