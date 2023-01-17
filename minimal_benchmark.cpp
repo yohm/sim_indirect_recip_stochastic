@@ -25,11 +25,6 @@ void Update(size_t t_max, double q, double mu_percept) {
     double c_prob = norms[donor].P.CProb(M[donor][donor], M[donor][recip]);
     Action A = (c_prob == 1.0 || R01() < c_prob) ? Action::C : Action::D;
 
-    // if (A == Action::C) {
-    //   coop_count[donor][recip]++;
-    // }
-    // game_count[donor][recip]++;
-
     // updating the images from observers' viewpoint
     for (size_t obs = 0; obs < N; obs++) {
       if (obs == donor || obs == recip || R01() < q) {  // observe with probability q
@@ -40,27 +35,11 @@ void Update(size_t t_max, double q, double mu_percept) {
 
         // update donor's reputation
         double g_prob_donor = norms[obs].Rd.GProb(M[obs][donor], M[obs][recip], a_obs);
-        if (g_prob_donor == 1.0) {
-          M[obs][donor] = Reputation::G;
-        }
-        else if (g_prob_donor == 0.0) {
-          M[obs][donor] = Reputation::B;
-        }
-        else {
-          M[obs][donor] = (R01() < g_prob_donor) ? Reputation::G : Reputation::B;
-        }
+        M[obs][donor] = (R01() < g_prob_donor) ? Reputation::G : Reputation::B;
 
         // update recipient's reputation
         double g_prob_recip = norms[obs].Rr.GProb(M[obs][donor], M[obs][recip], a_obs);
-        if (g_prob_recip == 1.0) {
-          M[obs][recip] = Reputation::G;
-        }
-        else if (g_prob_recip == 0.0) {
-          M[obs][recip] = Reputation::B;
-        }
-        else {
-          M[obs][recip] = (R01() < g_prob_recip) ? Reputation::G : Reputation::B;
-        }
+        M[obs][recip] = (R01() < g_prob_recip) ? Reputation::G : Reputation::B;
       }
     }
   }
