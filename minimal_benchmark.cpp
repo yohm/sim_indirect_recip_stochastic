@@ -21,7 +21,6 @@ void Update(size_t t_max, double q, double mu_percept) {
     // randomly choose donor & recipient
     size_t donor = static_cast<size_t>(R01() * N);
     size_t recip = (donor + static_cast<size_t>(R01() * (N-1)) + 1) % N;
-    assert(donor != recip);
 
     double c_prob = norms[donor].P.CProb(M[donor][donor], M[donor][recip]);
     Action A = (c_prob == 1.0 || R01() < c_prob) ? Action::C : Action::D;
