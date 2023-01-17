@@ -29,3 +29,5 @@ add_executable(test_PublicRepGame test_PublicRepGame.cpp PublicRepGame.hpp Norm.
 
 add_executable(test_PrivRepGame test_PrivRepGame.cpp PrivRepGame.hpp Norm.hpp)
 target_link_libraries(test_PrivRepGame OpenMP::OpenMP_CXX Eigen3::Eigen)
+
+add_executable(minimal_benchmark minimal_benchmark.cpp Norm.hpp PrivRepGame.hpp)
