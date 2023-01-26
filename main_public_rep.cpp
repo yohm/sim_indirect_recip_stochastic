@@ -14,7 +14,7 @@ std::pair<bool,std::array<double,2>> CheckCESS(const Norm& norm, double mu_a_rec
   const double mu_e = 1.0e-3, mu_a_donor = 1.0e-3;
   PublicRepGame game(mu_e, mu_a_donor, mu_a_recip, norm);
   auto brange = game.ESSBenefitRange();
-  bool isCESS = game.pc_res_res > 0.98 && brange[0] < 1.05 && brange[1] > 100;
+  bool isCESS = game.pc_res_res > 0.98 && brange[0] < 100 && brange[0] + 0.001 < brange[1];
   // IC(brange);
   return {isCESS, brange};
 }
