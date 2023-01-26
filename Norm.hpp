@@ -469,6 +469,18 @@ public:
                 AssessmentRule::KeepRecipient(),
                 {{0, 1, 0, 1}});
   }
+  static Norm SecondarySixteen(int i) {
+    if (i <= 0 || i > 16) { throw std::runtime_error("Norm: i must be between 1 and 16"); }
+    double R_GB_C = static_cast<double>( ((i - 1) >> 3) & 0b1 );
+    double R_BG_C = static_cast<double>( ((i - 1) >> 2) & 0b1 );
+    double R_BB_C = static_cast<double>( ((i - 1) >> 1) & 0b1 );
+    double R_BB_D = static_cast<double>( ((i - 1) >> 0) & 0b1 );
+    double P_BB = 0.0;
+    if (R_BB_C == 1.0 && R_BB_D == 0.0) { P_BB = 1.0; }
+    return Norm({{R_BB_D, R_BB_C, 1, R_BG_C, 1, R_GB_C, 0, 1}},
+                AssessmentRule::KeepRecipient(),
+                {{P_BB, 0, 0, 1}});
+  }
   static const std::vector<std::pair<int, std::string> > NormNames;
   std::string GetName() const {
     if (IsDeterministic()) {
@@ -527,7 +539,23 @@ const std::vector<std::pair<int,std::string> > Norm::NormNames = {{
                                                                     {L5().ID(), "L5"},
                                                                     {L6().ID(), "L6"},
                                                                     {L7().ID(), "L7"},
-                                                                    {L8().ID(), "L8"}
+                                                                    {L8().ID(), "L8"},
+                                                                    {SecondarySixteen(1).ID(), "S1"},
+                                                                    {SecondarySixteen(2).ID(), "S2"},
+                                                                    {SecondarySixteen(3).ID(), "S3"},
+                                                                    {SecondarySixteen(4).ID(), "S4"},
+                                                                    {SecondarySixteen(5).ID(), "S5"},
+                                                                    {SecondarySixteen(6).ID(), "S6"},
+                                                                    {SecondarySixteen(7).ID(), "S7"},
+                                                                    {SecondarySixteen(8).ID(), "S8"},
+                                                                    {SecondarySixteen(9).ID(), "S9"},
+                                                                    {SecondarySixteen(10).ID(), "S10"},
+                                                                    {SecondarySixteen(11).ID(), "S11"},
+                                                                    {SecondarySixteen(12).ID(), "S12"},
+                                                                    {SecondarySixteen(13).ID(), "S13"},
+                                                                    {SecondarySixteen(14).ID(), "S14"},
+                                                                    {SecondarySixteen(15).ID(), "S15"},
+                                                                    {SecondarySixteen(16).ID(), "S16"},
                                                                 }};
 bool operator==(const Norm& n1, const Norm& n2) {
   return n1.P == n2.P && n1.Rd == n2.Rd && n1.Rr == n2.Rr;
