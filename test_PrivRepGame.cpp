@@ -181,8 +181,14 @@ int main(int argc, char *argv[]) {
   }
   else if (argc == 2) {
     std::regex re_d(R"(\d+)"); // regex for digits
+    std::regex re_x(R"(^0x[0-9a-fA-F]+$)");  // regex for digits in hexadecimal
     if (std::regex_match(argv[1], re_d)) {
       int id = std::stoi(argv[1]);
+      Norm n = Norm::ConstructFromID(id);
+      PrintSelectionMutationEquilibrium(n);
+    }
+    else if (std::regex_match(argv[1], re_x)) {
+      int id = std::stoi(argv[1], nullptr, 16);
       Norm n = Norm::ConstructFromID(id);
       PrintSelectionMutationEquilibrium(n);
     }
