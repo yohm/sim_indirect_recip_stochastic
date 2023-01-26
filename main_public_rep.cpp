@@ -3,6 +3,7 @@
 #include <set>
 #include <map>
 #include <random>
+#include <bitset>
 #include "Norm.hpp"
 #include "PublicRepGame.hpp"
 
