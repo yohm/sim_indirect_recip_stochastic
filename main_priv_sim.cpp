@@ -19,9 +19,9 @@ const EvolPrivRepGameAllCAllD GetEvol() {
   }
   else {
     EvolPrivRepGame::SimulationParameters params;
-    params.n_init = 1e5;
-    params.n_steps = 1e5;
-    p_evol = new EvolPrivRepGameAllCAllD(20, params, 5.0, 1.0);
+    params.n_init = 1e4;
+    params.n_steps = 4e4;
+    p_evol = new EvolPrivRepGameAllCAllD(30, params, 5.0, 1.0);
     return *p_evol;
   }
 }
@@ -116,7 +116,10 @@ int main(int argc, char** argv) {
     return output;
   };
 
-  caravan::Start(on_init, on_result_receive, do_task, MPI_COMM_WORLD);
+  caravan::Option opt;
+  opt.log_level = 2;
+  opt.dump_log = "dump.log";
+  caravan::Start(on_init, on_result_receive, do_task, MPI_COMM_WORLD, opt);
 
   int my_rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
