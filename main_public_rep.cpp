@@ -1,4 +1,5 @@
 #include <iostream>
+#include <cmath>
 #include <vector>
 #include <set>
 #include <map>
@@ -11,13 +12,13 @@
 constexpr Reputation B = Reputation::B, G = Reputation::G;
 constexpr Action C = Action::C, D = Action::D;
 
-std::pair<bool,std::array<double,2>> CheckCESS(const Norm& norm, double mu_a_recip = 1.0e-3) {
+std::tuple<bool,std::array<double,2>,double> CheckCESS(const Norm& norm, double mu_a_recip = 1.0e-3) {
   const double mu_e = 1.0e-3, mu_a_donor = 1.0e-3;
   PublicRepGame game(mu_e, mu_a_donor, mu_a_recip, norm);
   auto brange = game.ESSBenefitRange();
-  bool isCESS = game.pc_res_res > 0.98 && brange[0] < 100 && brange[0] + 0.001 < brange[1];
+  bool isCESS = game.pc_res_res > 0.98 && brange[0] < 10 && brange[0] + 0.001 < brange[1];
   // IC(brange);
-  return {isCESS, brange};
+  return {isCESS, brange, game.h_star};
 }
 
 void FindLeadingEight() {
@@ -34,9 +35,9 @@ void FindLeadingEight() {
         continue;
       }
 
-      auto [isCESS, brange] = CheckCESS(norm, 0.0);
+      auto [isCESS, brange, h_star] = CheckCESS(norm, 0.0);
       if (isCESS) {
-        if (norm.CProb(Reputation::G, Reputation::G) != 1.0) {
+        if (h_star < 0.5) {
           norm = norm.SwapGB();
         }
         std::cerr << norm.Inspect();
@@ -49,30 +50,61 @@ void FindLeadingEight() {
   IC(num, num_passed);
 }
 
+std::string IdentifyType(const Norm& norm) {
+  auto R1 = norm.Rd;
+  auto R2 = norm.Rr;
+  auto P = norm.P;
+  // P : [100*]
+  if ( P.CProb(G, G) == 1.0 && P.CProb(G, B) == 0.0 && P.CProb(B, G) == 0.0 ) {
+    if ( R2.GProb(G,G,C) == 1.0 && R2.GProb(G,B,D) == 1.0 && R2.GProb(B,G,D) == 1.0 ) {
+      if ( R1.GProb(G,B,D) == 1.0 && R1.GProb(B,G,D) == 0.0) {
+        return "P100_R2_111_R1_10";
+      }
+      else if ( R1.GProb(G,B,D) == 0.0 && R1.GProb(B,G,D) == 1.0) {
+        return "P100_R2_111_R1_01";
+      }
+    }
+  }
+  // P : [101*]
+  if ( P.CProb(G, G) == 1.0 && P.CProb(G, B) == 0.0 && P.CProb(B, G) == 1.0 ) {
+    if (R2.GProb(G, G, C) == 1.0 && R2.GProb(G, B, D) == 1.0 && R2.GProb(B, G, C) == 1.0) {
+      return "P101_R2_111";
+    }
+  }
+  return "other";
+}
+
 void EnumerateAllCESS() {
   size_t num = 0, num_passed = 0;
-  std::map<std::string, std::set<int>> cess_norms;
+  std::map< std::pair<std::string,int>, std::vector<int>> cess_norms;
 
   for (int j = 0; j < 256; j++) {
     AssessmentRule R1 = AssessmentRule::MakeDeterministicRule(j);
     for (int k = 0; k < 256; k++) {
       AssessmentRule R2 = AssessmentRule::MakeDeterministicRule(k);
-
       for (int i = 0; i < 16; i++) {
         ActionRule P = ActionRule::MakeDeterministicRule(i);
+
         Norm norm(R1, R2, P);
         if ( norm.ID() < norm.SwapGB().ID() ) {
           continue;
         }
 
-        auto [isCESS, brange] = CheckCESS(norm);
+        auto [isCESS, brange, h_star] = CheckCESS(norm);
         if (isCESS) {
-          if (norm.CProb(Reputation::G, Reputation::G) != 1.0) {
+          if (h_star < 0.5) {
             norm = norm.SwapGB();
           }
           //std::cerr << norm.Inspect();
-          cess_norms[norm.SimilarNorm()].insert(norm.Rr.ID());
-          std::cerr << "brange: "  << brange[0] << " " << brange[1] << std::endl;
+          std::string similar_norm_name = norm.SimilarNorm();
+          if (similar_norm_name.empty()) {
+            similar_norm_name = IdentifyType(norm);
+          }
+          if (brange[1] < 100) {
+            throw std::runtime_error("brange[1] < 100");
+          }
+          cess_norms[std::make_pair(similar_norm_name,std::round(brange[0]))].push_back(norm.ID());
+          // std::cerr << "brange: "  << brange[0] << " " << brange[1] << std::endl;
           num_passed++;
         }
         num++;
@@ -82,11 +114,14 @@ void EnumerateAllCESS() {
 
   IC(num, num_passed);
   for (auto& kv : cess_norms) {
-    std::cerr << kv.first << " " << kv.second.size() << std::endl;
-    for (auto& v : kv.second) {
-      std::cerr << std::bitset<8>(v) << std::endl;
+    std::cerr << kv.first.first << " " << kv.first.second << " " << kv.second.size() << std::endl;
+    if (kv.first.first == "other") {
+      for (auto& v : kv.second) {
+        std::cerr << Norm::ConstructFromID(v).Inspect();
+        break;
+        // std::cerr << std::bitset<8>(v) << std::endl;
+      }
     }
-    std::cerr << std::endl;
   }
 }
 
@@ -109,7 +144,7 @@ void EnumerateR2() {
       AssessmentRule R2 = AssessmentRule::MakeDeterministicRule(k);
       norm.Rr = R2;
 
-      auto [isCESS, brange] = CheckCESS(norm);
+      auto [isCESS, brange, h_star] = CheckCESS(norm);
       if (isCESS) {
         cess_ids.insert(norm.Rr.ID());
         num_passed++;
@@ -451,7 +486,7 @@ void RandomCheckAnalyticNorms() {
 
 int main() {
   // FindLeadingEight();
-  // EnumerateAllCESS();
+  EnumerateAllCESS();
   // EnumerateR2();
   // FindMutant();
 
@@ -475,7 +510,7 @@ int main() {
   assert(ok);
    */
 
-  RandomCheckAnalyticNorms();
+  // RandomCheckAnalyticNorms();
 
   return 0;
 }
