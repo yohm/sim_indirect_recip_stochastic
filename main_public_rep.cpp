@@ -397,6 +397,29 @@ Norm MakeNormFromTable(std::array<Action,4> actions, std::array<double,8> r1, st
   return Norm(Rd, Rr, ar);
 }
 
+void StochasticVariantLeadingEight() {
+  {
+    double p3 = 0.3;
+    double p1 = 1.0 - p3;
+    double p2 = 1.5 - p3;
+    Norm norm = MakeNormFromTable({C, D, C, C}, {1, p1, 0, p2, p3, 0, 1, 0}, {1, 1, 0, 0, 1, 1, 0, 0});
+
+    auto brange1 = AnalyticBenefitRange(norm);
+    auto brange2 = PublicRepGame(1.0e-6, 1.0e-6, 1.0e-6, norm).ESSBenefitRange();
+    IC(brange1, brange2);
+  }
+
+  {
+    double p3 = 0.2;
+    double p1 = 0.0;
+    double p2 = 1.0;
+    Norm norm = MakeNormFromTable({C, D, D, D}, {1, p1, 0, p2, 0, p3, 0, 0}, {1, 1, 0, 0, 1, 1, 0, 0});
+    auto brange1 = AnalyticBenefitRange(norm);
+    auto brange2 = PublicRepGame(1.0e-6, 1.0e-6, 1.0e-6, norm).ESSBenefitRange();
+    IC(brange1, brange2);
+  }
+}
+
 bool CompareAnalyticNumericalBranges(const Norm& norm) {
   std::cerr << norm.Inspect();
   auto brange1 = AnalyticBenefitRange(norm);
@@ -486,7 +509,8 @@ void RandomCheckAnalyticNorms() {
 
 int main() {
   // FindLeadingEight();
-  EnumerateAllCESS();
+  // EnumerateAllCESS();
+  StochasticVariantLeadingEight();
   // EnumerateR2();
   // FindMutant();
 
