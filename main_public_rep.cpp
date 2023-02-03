@@ -446,11 +446,186 @@ void RandomCheckAnalyticNorms() {
 
 }
 
+std::vector<Norm> CESS_deterministic_norms(int c) {
+  constexpr Reputation G = Reputation::G, B = Reputation::B;
+  constexpr Action C = Action::C, D = Action::D;
+  std::vector<Norm> ans;
+  auto leading_eight = std::vector{Norm::L1(), Norm::L2(), Norm::L3(), Norm::L4(), Norm::L5(), Norm::L6(), Norm::L7(), Norm::L8()};
+  auto secondary_sixteen = std::vector<Norm>();
+  for (int i = 1; i <= 16; ++i) {
+    secondary_sixteen.push_back(Norm::SecondarySixteen(i));
+  }
+
+  if (c == 0) {
+    // leading eight + R_2(G,G,C) = 1, R_2(G,B,D) = 0, R_2(B,G,C) = 1
+    for (auto &l : leading_eight) {
+      for (int i = 0; i < 256; ++i) {
+        AssessmentRule Rr = AssessmentRule::MakeDeterministicRule(i);
+        if (Rr.GProb(G, G, C) == 1 && Rr.GProb(G, B, D) == 0 && Rr.GProb(B, G, C) == 1) {
+          ans.push_back(Norm(l.Rd, Rr, l.P));
+        }
+      }
+    }
+  }
+  else if (c == 1) {
+    // leading eight + R_2(G,G,C) = 1, R_2(G,B,D) = 1, R_2(B,G,C) = 0
+    for (auto &l : leading_eight) {
+      for (int i = 0; i < 256; ++i) {
+        AssessmentRule Rr = AssessmentRule::MakeDeterministicRule(i);
+        if (Rr.GProb(G, G, C) == 1 && Rr.GProb(G, B, D) == 1 && Rr.GProb(B, G, C) == 0) {
+          ans.push_back(Norm(l.Rd, Rr, l.P));
+        }
+      }
+    }
+  }
+  else if (c == 2) {
+    // leading eight + R_2(G,G,C) = 1, R_2(G,B,D) = 1, R_2(B,G,C) = 1
+    for (auto &l : leading_eight) {
+      for (int i = 0; i < 256; ++i) {
+        AssessmentRule Rr = AssessmentRule::MakeDeterministicRule(i);
+        if (Rr.GProb(G, G, C) == 1 && Rr.GProb(G, B, D) == 1 && Rr.GProb(B, G, C) == 1) {
+          ans.push_back(Norm(l.Rd, Rr, l.P));
+        }
+      }
+    }
+  }
+  else if (c == 3) {
+    // secondary sixteen + R_2(G,G,C) = 1, R_2(G,B,D) = 0, R_2(B,G,D) = 1
+    for (auto &s : secondary_sixteen) {
+      for (int i = 0; i < 256; ++i) {
+        AssessmentRule Rr = AssessmentRule::MakeDeterministicRule(i);
+        if (Rr.GProb(G, G, C) == 1 && Rr.GProb(G, B, D) == 0 && Rr.GProb(B, G, D) == 1) {
+          ans.push_back(Norm(s.Rd, Rr, s.P));
+        }
+      }
+    }
+  }
+  else if (c == 4) {
+    // secondary sixteen + R_2(G,G,C) = 1, R_2(G,B,D) = 1, R_2(B,G,D) = 0
+    for (auto &s : secondary_sixteen) {
+      for (int i = 0; i < 256; ++i) {
+        AssessmentRule Rr = AssessmentRule::MakeDeterministicRule(i);
+        if (Rr.GProb(G, G, C) == 1 && Rr.GProb(G, B, D) == 1 && Rr.GProb(B, G, D) == 0) {
+          ans.push_back(Norm(s.Rd, Rr, s.P));
+        }
+      }
+    }
+  }
+  else if (c == 5) {
+    // secondary sixteen + R_2(G,G,C) = 1, R_2(G,B,D) = 1, R_2(B,G,D) = 1
+    for (auto &s : secondary_sixteen) {
+      for (int i = 0; i < 256; ++i) {
+        AssessmentRule Rr = AssessmentRule::MakeDeterministicRule(i);
+        if (Rr.GProb(G, G, C) == 1 && Rr.GProb(G, B, D) == 1 && Rr.GProb(B, G, D) == 1) {
+          ans.push_back(Norm(s.Rd, Rr, s.P));
+        }
+      }
+    }
+  }
+  else if (c == 6) {
+    // L' [leading eight with R_1(G,B,C)==0 + R_1(G,B,D) = 0] + R_2(G,G,C) = 1, R_2(G,B,D) = 1, R_2(B,G,C) = 1
+    std::vector<Norm> Lprime;
+    for (auto l : leading_eight) {
+      if (l.Rd.GProb(G, B, C) == 0.0) {
+        l.Rd.SetGProb(G, B, D, 0.0);
+        Lprime.push_back(l);
+      }
+    }
+    assert(Lprime.size() == 4);
+    for (auto l_prime: Lprime) {
+      for (int i = 0; i < 256; ++i) {
+        AssessmentRule Rr = AssessmentRule::MakeDeterministicRule(i);
+        if (Rr.GProb(G, G, C) == 1 && Rr.GProb(G, B, D) == 1 && Rr.GProb(B, G, C) == 1) {
+          ans.push_back(Norm(l_prime.Rd, Rr, l_prime.P));
+        }
+      }
+    }
+  }
+  else if (c == 7) {
+    // S' [secondary sixteen with R_1(B,G,C)==0 + R_1(B,G,D) = 0] + R_2(G,G,C) = 1, R_2(G,B,D) = 1, R_2(B,G,D) = 1
+    std::vector<Norm> Sprime;
+    for (auto s : secondary_sixteen) {
+      if (s.Rd.GProb(B, G, C) == 0.0) {
+        s.Rd.SetGProb(B, G, D, 0.0);
+        Sprime.push_back(s);
+      }
+    }
+    assert(Sprime.size() == 8);
+    for (auto s_prime: Sprime) {
+      for (int i = 0; i < 256; ++i) {
+        AssessmentRule Rr = AssessmentRule::MakeDeterministicRule(i);
+        if (Rr.GProb(G, G, C) == 1 && Rr.GProb(G,B,D) == 1 && Rr.GProb(B, G, D) == 1) {
+          ans.push_back(Norm(s_prime.Rd, Rr, s_prime.P));
+        }
+      }
+    }
+  }
+  else if (c == 8) {
+    // S'' [secondary sixteen with R_1(G,B,C)==0 + R_1(G,B,D) = 0] + R_2(G,G,C) = 1, R_2(G,B,D) = 1, R_2(B,G,D) = 1
+    std::vector<Norm> Sprime;
+    for (auto s : secondary_sixteen) {
+      if (s.Rd.GProb(G,B, C) == 0.0) {
+        s.Rd.SetGProb(G,B, D, 0.0);
+        Sprime.push_back(s);
+      }
+    }
+    assert(Sprime.size() == 8);
+    for (auto s_prime : Sprime) {
+      for (int i = 0; i < 256; ++i) {
+        AssessmentRule Rr = AssessmentRule::MakeDeterministicRule(i);
+        if (Rr.GProb(G, G, C) == 1 && Rr.GProb(G, B, D) == 1 && Rr.GProb(B, G, D) == 1) {
+          ans.push_back(Norm(s_prime.Rd, Rr, s_prime.P));
+        }
+      }
+    }
+  }
+  else {
+    throw std::runtime_error("invalid c");
+  }
+  return ans;
+}
+
+void check_CESS_deterministic_norms() {
+  auto close = [](double a, double b) {
+    return std::abs(a - b) < 0.05;
+  };
+
+  auto assert_CESS = [&close](int cess_class, int num_norms, double b_lower) {
+    auto norms = CESS_deterministic_norms(cess_class);
+    assert(norms.size() == num_norms);
+    for (auto& norm : norms) {
+      auto [isCESS, brange, h_star] = CheckCESS(norm);
+      if (!isCESS) {
+        std::cerr << "Failed CESS class " << cess_class << " with " << num_norms << " norms" << std::endl;
+        IC(isCESS, brange, h_star, norm.Inspect());
+      }
+      assert(isCESS);
+      assert(close(brange[0], b_lower));
+      assert(brange[1] > 1.0e2);
+      assert(close(h_star, 1.0));
+    }
+    std::cerr << "Passed CESS class " << cess_class << " with " << num_norms << " norms" << std::endl;
+  };
+
+  assert_CESS(0, 256, 1.0);
+  assert_CESS(1, 256, 2.0);
+  assert_CESS(2, 256, 2.0);
+  assert_CESS(3, 512, 2.0);
+  assert_CESS(4, 512, 3.0);
+  assert_CESS(5, 512, 3.0);
+  assert_CESS(6, 128, 2.0);
+  assert_CESS(7, 256, 2.0);
+  assert_CESS(8, 256, 3.0);
+
+}
+
+
 int main() {
-  FindLeadingEight();
+  // FindLeadingEight();
   // EnumerateAllCESS();
   // StochasticVariantLeadingEight();
   // RandomCheckAnalyticNorms();
+  check_CESS_deterministic_norms();
 
   return 0;
 }
