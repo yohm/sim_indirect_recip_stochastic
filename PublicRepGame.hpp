@@ -12,9 +12,10 @@
 class PublicRepGame {
 public:
   PublicRepGame(double mu_e, double mu_a_donor, double mu_a_recip, const Norm& norm) :
-  mu_e(mu_e), mu_a_donor(mu_a_donor), mu_a_recip(mu_a_recip), norm(norm), r_norm(norm.RescaleWithError(mu_e, mu_a_donor, mu_a_recip)) {
-    h_star = ResidentEqReputation();
-    pc_res_res = h_star * h_star * r_norm.CProb(Reputation::G, Reputation::G)
+  mu_e(mu_e), mu_a_donor(mu_a_donor), mu_a_recip(mu_a_recip), h_star(0.0), pc_res_res(0.0),
+  norm(norm), r_norm(norm.RescaleWithError(mu_e, mu_a_donor, mu_a_recip)) {
+    const_cast<double&>(h_star) = ResidentEqReputation();
+    const_cast<double&>(pc_res_res) = h_star * h_star * r_norm.CProb(Reputation::G, Reputation::G)
         + h_star * (1.0-h_star) * r_norm.CProb(Reputation::G, Reputation::B)
         + (1.0-h_star) * h_star * r_norm.CProb(Reputation::B, Reputation::G)
         + (1.0-h_star) * (1.0-h_star) * r_norm.CProb(Reputation::B, Reputation::B);
@@ -39,8 +40,8 @@ public:
     return ss.str();
   }
   const double mu_e, mu_a_donor, mu_a_recip;
-  double h_star; // equilibrium reputation of resident species
-  double pc_res_res;  // cooperation probability of resident species
+  const double h_star; // equilibrium reputation of resident species
+  const double pc_res_res;  // cooperation probability of resident species
   const Norm norm;
   const Norm r_norm;  // norm that takes into account error rates (mu_e, mu_a)
 private:
