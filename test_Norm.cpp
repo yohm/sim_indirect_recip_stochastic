@@ -152,39 +152,75 @@ void test_Norm() {
   }
 
   // test leading eight
-  std::array<Norm,8> leading_eight = {Norm::L1(), Norm::L2(), Norm::L3(), Norm::L4(),
-                                      Norm::L5(), Norm::L6(), Norm::L7(), Norm::L8()};
-  std::array<int,8> l8_ids =
-      {0b10111010'11001100'1011, 0b10011010'11001100'1011, 0b10111011'11001100'1010, 0b10111001'11001100'1010,
-       0b10011011'11001100'1010, 0b10011001'11001100'1010, 0b10111000'11001100'1010, 0b10011000'11001100'1010
-      };
-  for (size_t i = 0; i < 8; i++) {
-    auto l = leading_eight[i];
-    std::cout << "L" << i+1 << " : " << l.Inspect();
-    assert( l.IsDeterministic() == true );
-    assert( l.IsRecipKeep() == true );
-    if (i == 2 || i == 5) {
-      assert( l.IsSecondOrder() == true );
-    } else {
-      assert( l.IsSecondOrder() == false );
+  {
+    std::array<Norm, 8> leading_eight = {Norm::L1(), Norm::L2(), Norm::L3(), Norm::L4(),
+                                         Norm::L5(), Norm::L6(), Norm::L7(), Norm::L8()};
+    std::array<int, 8> l8_ids =
+        {0b10111010'11001100'1011, 0b10011010'11001100'1011, 0b10111011'11001100'1010, 0b10111001'11001100'1010,
+         0b10011011'11001100'1010, 0b10011001'11001100'1010, 0b10111000'11001100'1010, 0b10011000'11001100'1010
+        };
+    for (size_t i = 0; i < 8; i++) {
+      auto l = leading_eight[i];
+      std::cout << "L" << i + 1 << " : " << l.Inspect();
+      assert(l.IsDeterministic() == true);
+      assert(l.IsRecipKeep() == true);
+      if (i == 2 || i == 5) {
+        assert(l.IsSecondOrder() == true);
+      } else {
+        assert(l.IsSecondOrder() == false);
+      }
+      // std::cout << std::bitset<20>(l.ID()) << std::endl;
+      assert(l.GetName() == "L" + std::to_string(i + 1));
+      assert(l.ID() == l8_ids[i]);
+      assert(Norm::ConstructFromID(l.ID()) == l);
+
+      assert(l.CProb(Reputation::G, Reputation::G) == 1.0);
+      assert(l.CProb(Reputation::G, Reputation::B) == 0.0);
+      assert(l.CProb(Reputation::B, Reputation::G) == 1.0);
+      assert(l.GProbDonor(Reputation::G, Reputation::G, Action::C) == 1.0);
+      assert(l.GProbDonor(Reputation::G, Reputation::G, Action::D) == 0.0); // identification of defectors
+      assert(l.GProbDonor(Reputation::B, Reputation::G, Action::D) == 0.0); // identification of defectors
+      assert(l.GProbDonor(Reputation::G, Reputation::B, Action::D) == 1.0); // justified punishment
+      assert(l.GProbDonor(Reputation::B, Reputation::G, Action::C) == 1.0); // apology
+
+      Norm similar = l;
+      similar.Rr.SetGProb(Reputation::G, Reputation::G, Action::C, 0.5);
+      assert(similar.SimilarNorm() == l.GetName());
     }
-    // std::cout << std::bitset<20>(l.ID()) << std::endl;
-    assert( l.GetName() == "L"+std::to_string(i+1) );
-    assert( l.ID() == l8_ids[i] );
-    assert( Norm::ConstructFromID(l.ID()) == l );
+  }
 
-    assert( l.CProb(Reputation::G, Reputation::G) == 1.0 );
-    assert( l.CProb(Reputation::G, Reputation::B) == 0.0 );
-    assert( l.CProb(Reputation::B, Reputation::G) == 1.0 );
-    assert( l.GProbDonor(Reputation::G, Reputation::G, Action::C) == 1.0 );
-    assert( l.GProbDonor(Reputation::G, Reputation::G, Action::D) == 0.0 ); // identification of defectors
-    assert( l.GProbDonor(Reputation::B, Reputation::G, Action::D) == 0.0 ); // identification of defectors
-    assert( l.GProbDonor(Reputation::G, Reputation::B, Action::D) == 1.0 ); // justified punishment
-    assert( l.GProbDonor(Reputation::B, Reputation::G, Action::C) == 1.0 ); // apology
+  // test secondary sixteen
+  {
+    std::vector<Norm> secondary_sixteen;
+    for (int i = 1; i <= 16; i++) {
+      secondary_sixteen.push_back(Norm::SecondarySixteen(i));
+    }
 
-    Norm similar = l;
-    similar.Rr.SetGProb(Reputation::G, Reputation::G, Action::C, 0.5);
-    assert(similar.SimilarNorm() == l.GetName());
+    for (const Norm& n: secondary_sixteen) {
+      std::string name = n.GetName();
+      std::regex word_regex("(S[1-9]|S1[0-6])");
+      assert(std::regex_match(name, word_regex));
+
+      assert(n.IsDeterministic() == true);
+      assert(n.IsRecipKeep() == true);
+      assert(Norm::ConstructFromID(n.ID()) == n);
+
+      // test common prescriptions
+      assert( n.CProb(G, G) == 1.0 );
+      assert( n.CProb(G, B) == 0.0 );
+      assert( n.CProb(B, G) == 0.0 );
+      assert( n.GProbDonor(G, G, C) == 1.0 );
+      assert( n.GProbDonor(G, G, D) == 0.0 );
+      assert( n.GProbDonor(G, B, D) == 1.0 );
+      assert( n.GProbDonor(B, G, D) == 1.0 );
+
+      if (n.GProbDonor(B,B,C) == 1 && n.GProbDonor(B,B,D) == 0) {
+        assert( n.CProb(B, B) == 1.0 );
+      } else {
+        assert( n.CProb(B, B) == 0.0 );
+      }
+    }
+
   }
 
   // test rescaling
