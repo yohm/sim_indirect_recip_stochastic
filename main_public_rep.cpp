@@ -125,43 +125,6 @@ void EnumerateAllCESS() {
   }
 }
 
-void EnumerateR2() {
-
-  std::array<Norm,8> leading_eight = {Norm::L1(), Norm::L2(), Norm::L3(), Norm::L4(),
-                                      Norm::L5(), Norm::L6(), Norm::L7(), Norm::L8()};
-  std::set<int> R2_ids = {
-      0b10001000, 0b10001001, 0b10001010, 0b10001011, 0b10001100, 0b10001101, 0b10001110, 0b10001111,
-      0b10101000, 0b10101001, 0b10101010, 0b10101011, 0b10101100, 0b10101101, 0b10101110, 0b10101111,
-      0b11001000, 0b11001001, 0b11001010, 0b11001011, 0b11001100, 0b11001101, 0b11001110, 0b11001111,
-      0b11101000, 0b11101001, 0b11101010, 0b11101011, 0b11101100, 0b11101101, 0b11101110, 0b11101111
-  };
-
-  size_t num = 0, num_passed = 0;
-  for (Norm norm: leading_eight) {
-    // overwrite R2
-    std::set<int> cess_ids;
-    for (int k = 0; k < 256; k++) {
-      AssessmentRule R2 = AssessmentRule::MakeDeterministicRule(k);
-      norm.Rr = R2;
-
-      auto [isCESS, brange, h_star] = CheckCESS(norm);
-      if (isCESS) {
-        cess_ids.insert(norm.Rr.ID());
-        num_passed++;
-      }
-      num++;
-    }
-    if (cess_ids == R2_ids) {
-      std::cout << "Identical" << std::endl;
-    }
-    else {
-      throw std::runtime_error("something wrong");
-    }
-  }
-
-  IC(num, num_passed, R2_ids.size());
-}
-
 bool CloseEnough(double a, double b, double tol = 1.0e-2) {
   return std::abs(a - b) < tol;
 }
@@ -432,30 +395,6 @@ bool CompareAnalyticNumericalBranges(const Norm& norm) {
   return ( std::abs(brange1[0] - brange2[0]) < brange1[0]*th && std::abs(brange1[1] - brange2[1]) < brange1[1]*th );
 }
 
-void FindMutant() {
-  Norm norm = Norm::L3();
-  norm.Rr = AssessmentRule::MakeDeterministicRule(0b10001000);
-  norm.Rr.SetGProb(Reputation::G, Reputation::B, Action::D, 1.0);
-
-  const double mu_e = 1.0e-2, mu_a_donor = 1.0e-2, mu_a_recip = 1.0e-2;
-  PublicRepGame game(mu_e, mu_a_donor, mu_a_recip, norm);
-  auto brange = game.ESSBenefitRange();
-  IC(brange);
-
-  for (int id = 0; id < 16; id++) {
-    if (norm.P.ID() == id) continue;
-    ActionRule mut = ActionRule::MakeDeterministicRule(id);
-    auto b_range = game.StableBenefitRangeAgainstMutant(mut);
-    IC(id, b_range);
-  }
-
-  ActionRule alld = ActionRule::ALLD();
-  double h_mut = game.MutantEqReputation(alld);
-  auto probs = game.MutantCooperationProbs(alld);
-  IC(h_mut, probs, game.pc_res_res);
-
-}
-
 void RandomCheckAnalyticNorms() {
   size_t num_norms = 100000;
   std::mt19937_64 rng(123456789);
@@ -508,32 +447,9 @@ void RandomCheckAnalyticNorms() {
 }
 
 int main() {
-  // FindLeadingEight();
+  FindLeadingEight();
   // EnumerateAllCESS();
-  StochasticVariantLeadingEight();
-  // EnumerateR2();
-  // FindMutant();
-
-  /*
-  Norm norm = MakeNormFromTable(
-      {C,D,C,C},
-      {
-          1.0, 0.4,
-          0.5, 0.5,
-          1.0, 0.3,
-          1.0, 0.0
-      },
-      {
-          1.0, 0.0,
-          1.0, 0.0,
-          1.0, 0.0,
-          1.0, 0.0,
-      }
-  );
-  bool ok = CompareAnalyticNumericalBranges(norm);
-  assert(ok);
-   */
-
+  // StochasticVariantLeadingEight();
   // RandomCheckAnalyticNorms();
 
   return 0;
