@@ -619,13 +619,133 @@ void check_CESS_deterministic_norms() {
 
 }
 
+void CESS_cooperation_level_scaling() {
+  std::vector<Norm> all;
+  for (int i = 0; i <= 8; ++i) {
+    auto norms = CESS_deterministic_norms(i);
+    all.insert(all.end(), norms.begin(), norms.end());
+  }
+
+  std::vector<double> mu_array = {0.02, 0.01, 0.005, 0.002, 0.001, 0.0005, 0.0002, 0.0001};
+
+  for (double mu: mu_array) {
+    std::cout << mu << " ";
+    for (auto& norm : all) {
+      PublicRepGame game(mu, mu, mu, norm);
+      std::cout << game.pc_res_res << ' ';
+    }
+    std::cout << std::endl;
+  }
+
+}
+
+void CESS_coop_classification() {
+  // conduct classification of the norms based on the cooperation level at mu=1e-3
+
+  double mu = 1.0e-3;
+  // class 0
+  {
+    auto norms = CESS_deterministic_norms(0);
+    std::vector<Norm> best_norms, second_best_norms;
+    for (auto &norm : norms) {
+      PublicRepGame game(mu, mu, mu, norm);
+      std::cerr << game.pc_res_res << std::endl;
+      if ( std::abs(game.pc_res_res - 0.9960) < 0.0001 ) {
+        best_norms.push_back(norm);
+        assert(norm.Rr.GProb(G, G, D) == 1.0);
+      }
+      else if ( std::abs(game.pc_res_res - 0.9950) < 0.0001 ) {
+        second_best_norms.push_back(norm);
+        assert(norm.Rr.GProb(G, G, D) == 0.0);
+      }
+      else {
+        throw std::runtime_error("unexpected cooperation level");
+      }
+    }
+    IC(best_norms.size(), second_best_norms.size());
+    std::cerr << "class 0 done" << std::endl;
+  }
+  // class 1
+  {
+    auto norms = CESS_deterministic_norms(1);
+    std::vector<Norm> best_norms, second_best_norms;
+    for (auto &norm : norms) {
+      PublicRepGame game(mu, mu, mu, norm);
+      std::cerr << game.pc_res_res << std::endl;
+      if ( std::abs(game.pc_res_res - 0.9960) < 0.0001 ) {
+        best_norms.push_back(norm);
+        assert(norm.Rr.GProb(G, G, D) == 1.0);
+      }
+      else if ( std::abs(game.pc_res_res - 0.9950) < 0.0001 ) {
+        second_best_norms.push_back(norm);
+        assert(norm.Rr.GProb(G, G, D) == 0.0);
+      }
+      else {
+        throw std::runtime_error("unexpected cooperation level");
+      }
+    }
+    IC(best_norms.size(), second_best_norms.size());
+    std::cerr << "class 1 done" << std::endl;
+  }
+  // class 2
+  {
+    auto norms = CESS_deterministic_norms(2);
+    std::vector<Norm> best_norms, second_best_norms;
+    for (auto& norm : norms) {
+      PublicRepGame game(mu, mu, mu, norm);
+      if ( std::abs(game.pc_res_res - 0.9975) < 0.0001 ) {
+        best_norms.push_back(norm);
+        assert(norm.Rr.GProb(G, G, D) == 1.0);
+      }
+      else if ( std::abs(game.pc_res_res - 0.9970) < 0.0001 ) {
+        second_best_norms.push_back(norm);
+        assert(norm.Rr.GProb(G, G, D) == 0.0);
+      }
+      else {
+        throw std::runtime_error("unexpected cooperation level");
+      }
+    }
+
+    IC(best_norms.size(), second_best_norms.size());
+    assert(best_norms.size() == 128);
+    assert(second_best_norms.size() == 128);
+    std::cerr << "class 2 done" << std::endl;
+  }
+  // class 3
+  {
+    auto norms = CESS_deterministic_norms(3);
+    std::vector<Norm> best_norms, second_best_norms;
+    for (auto& norm : norms) {
+      PublicRepGame game(mu, mu, mu, norm);
+      std::cerr << game.pc_res_res << std::endl;
+      if ( std::abs(game.pc_res_res - 0.9930) < 0.0001 ) {
+        best_norms.push_back(norm);
+        // std::cerr << norm.Inspect() << std::endl;
+        assert(norm.Rr.GProb(G, G, D) == 1.0);
+      }
+      else if ( std::abs(game.pc_res_res - 0.9910) < 0.0002 ) {
+        second_best_norms.push_back(norm);
+        assert(norm.Rr.GProb(G, G, D) == 0.0);
+      }
+      else {
+        throw std::runtime_error("unexpected cooperation level");
+      }
+    }
+
+    IC(best_norms.size(), second_best_norms.size());
+    assert(best_norms.size() == 256);
+    assert(second_best_norms.size() == 256);
+  }
+}
 
 int main() {
   // FindLeadingEight();
   // EnumerateAllCESS();
   // StochasticVariantLeadingEight();
   // RandomCheckAnalyticNorms();
-  check_CESS_deterministic_norms();
+  // check_CESS_deterministic_norms();
+  // CESS_cooperation_level_scaling();
+  CESS_coop_classification();
 
   return 0;
 }
