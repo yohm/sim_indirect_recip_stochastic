@@ -14,8 +14,8 @@ plt.rcParams['xtick.direction'] = 'in'
 plt.rcParams['ytick.direction'] = 'in'
 plt.rcParams['xtick.major.width'] = 1.0
 plt.rcParams['ytick.major.width'] = 1.0
-plt.rcParams['axes.labelsize'] = 30
-plt.rcParams['font.size'] = 22
+plt.rcParams['axes.labelsize'] = 18
+plt.rcParams['font.size'] = 16
 plt.rcParams['legend.fontsize'] = 10
 plt.rcParams['axes.linewidth'] = 1.2
 plt.rcParams['savefig.dpi'] = 200
@@ -49,16 +49,18 @@ d_level_mu3 = 1 - c_levels[mu_idx, 1:]
 # plot the histogram of c_level_mu3
 plt.clf()
 fig, ax = plt.subplots()
-plt.hist(d_level_mu3 / mu, bins=51)
-plt.xlabel(r'$(1 - p_c^{\rm res \to res} )/ \mu$')
+plt.hist(d_level_mu3 / mu, bins=51, color='gray', edgecolor='k', linewidth=0.5)
+plt.xlabel(r'error sensitivity, $(1 - p_c^{\rm res \to res} )/ \mu$')
 #plt.xlabel(r'$(1 - p_c^{\rm res \to res}) \times 10^3$')
 #plt.xlabel('self-defection level ($\\times 10^{-3}$)')
 plt.ylabel('# of norms')
 plt.xlim(0, 10)
 plt.yticks([0, 256, 512, 768])
-plt.text(0.5, 720, r'$\mu$ = 10$^{-3}$')
-plt.text(3.0, 500, 'L8')
-plt.text(5.5, 700, 'S16')
+#plt.text(0.5, 720, r'$\mu$ = 10$^{-3}$')
+plt.arrow(2.0, 720, -1, 0, head_width=40, head_length=0.2, width=15, fc='gray', ec='gray')
+plt.text(3.3, 720, 'more robust\nagainst errors', fontsize=12, horizontalalignment='center', verticalalignment='center')
+plt.text(3.6, 500, 'L8', fontsize=14, verticalalignment='center', horizontalalignment='center')
+plt.text(6.5, 700, 'S16', fontsize=14, verticalalignment='center', horizontalalignment='center')
 plt.savefig('c_level_mu3_hist.pdf')
 plt.show()
 
