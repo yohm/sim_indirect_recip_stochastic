@@ -65,9 +65,3 @@ plt.savefig('c_level_mu3_hist.pdf')
 plt.show()
 
 # %%
-# find the index where c_level_mu3 is less than 0.0035
-idx = np.where(d_level_mu3 < 0.0027)[0]
-idx, len(idx), d_level_mu3[idx]
-# %%
-
-# %%
