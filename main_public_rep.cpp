@@ -466,6 +466,7 @@ std::vector<Norm> CESS_deterministic_norms(int c) {
         }
       }
     }
+    assert(ans.size() == 256);
   }
   else if (c == 1) {
     // leading eight + R_2(G,G,C) = 1, R_2(G,B,D) = 1, R_2(B,G,C) = 0
@@ -642,100 +643,53 @@ void CESS_cooperation_level_scaling() {
 void CESS_coop_classification() {
   // conduct classification of the norms based on the cooperation level at mu=1e-3
 
-  double mu = 1.0e-3;
-  // class 0
-  {
-    auto norms = CESS_deterministic_norms(0);
-    std::vector<Norm> best_norms, second_best_norms;
+  using key_type = std::pair<int,double>; // (b_c_lower, error_sensitivity)
+  std::map<key_type, std::vector<Norm> > norm_map;
+
+  auto to_key = [](double b_c_lower, double error_sensitivity) {
+    // error sensitivity is rounded to the nearest 0.1
+  };
+
+  auto check_norms = [&norm_map](int norm_class, int exp_b_lower, double exp_error_sens1, double exp_error_sens2) {
+    double mu = 1.0e-4;
+    auto norms = CESS_deterministic_norms(norm_class);
     for (auto &norm : norms) {
       PublicRepGame game(mu, mu, mu, norm);
-      std::cerr << game.pc_res_res << std::endl;
-      if ( std::abs(game.pc_res_res - 0.9960) < 0.0001 ) {
-        best_norms.push_back(norm);
-        assert(norm.Rr.GProb(G, G, D) == 1.0);
-      }
-      else if ( std::abs(game.pc_res_res - 0.9950) < 0.0001 ) {
-        second_best_norms.push_back(norm);
-        assert(norm.Rr.GProb(G, G, D) == 0.0);
-      }
-      else {
-        throw std::runtime_error("unexpected cooperation level");
-      }
-    }
-    IC(best_norms.size(), second_best_norms.size());
-    std::cerr << "class 0 done" << std::endl;
-  }
-  // class 1
-  {
-    auto norms = CESS_deterministic_norms(1);
-    std::vector<Norm> best_norms, second_best_norms;
-    for (auto &norm : norms) {
-      PublicRepGame game(mu, mu, mu, norm);
-      std::cerr << game.pc_res_res << std::endl;
-      if ( std::abs(game.pc_res_res - 0.9960) < 0.0001 ) {
-        best_norms.push_back(norm);
-        assert(norm.Rr.GProb(G, G, D) == 1.0);
-      }
-      else if ( std::abs(game.pc_res_res - 0.9950) < 0.0001 ) {
-        second_best_norms.push_back(norm);
-        assert(norm.Rr.GProb(G, G, D) == 0.0);
-      }
-      else {
-        throw std::runtime_error("unexpected cooperation level");
-      }
-    }
-    IC(best_norms.size(), second_best_norms.size());
-    std::cerr << "class 1 done" << std::endl;
-  }
-  // class 2
-  {
-    auto norms = CESS_deterministic_norms(2);
-    std::vector<Norm> best_norms, second_best_norms;
-    for (auto& norm : norms) {
-      PublicRepGame game(mu, mu, mu, norm);
-      if ( std::abs(game.pc_res_res - 0.9975) < 0.0001 ) {
-        best_norms.push_back(norm);
-        assert(norm.Rr.GProb(G, G, D) == 1.0);
-      }
-      else if ( std::abs(game.pc_res_res - 0.9970) < 0.0001 ) {
-        second_best_norms.push_back(norm);
-        assert(norm.Rr.GProb(G, G, D) == 0.0);
-      }
-      else {
-        throw std::runtime_error("unexpected cooperation level");
-      }
-    }
+      double bc_lower = game.ESSBenefitRange()[0];
+      double error_sensitivity = (1.0 - game.pc_res_res) / mu;
+      error_sensitivity = std::round(error_sensitivity * 10.0) / 10.0;
+      auto key = std::make_pair((int)std::round(bc_lower), error_sensitivity);
+      norm_map[key].push_back(norm);
 
-    IC(best_norms.size(), second_best_norms.size());
-    assert(best_norms.size() == 128);
-    assert(second_best_norms.size() == 128);
-    std::cerr << "class 2 done" << std::endl;
-  }
-  // class 3
-  {
-    auto norms = CESS_deterministic_norms(3);
-    std::vector<Norm> best_norms, second_best_norms;
-    for (auto& norm : norms) {
-      PublicRepGame game(mu, mu, mu, norm);
-      std::cerr << game.pc_res_res << std::endl;
-      if ( std::abs(game.pc_res_res - 0.9930) < 0.0001 ) {
-        best_norms.push_back(norm);
-        // std::cerr << norm.Inspect() << std::endl;
-        assert(norm.Rr.GProb(G, G, D) == 1.0);
+      IC(norm_class, key);
+      assert( key.first == exp_b_lower );
+      if (norm.Rr.GProb(G, G, D) == 1.0) {
+        assert( key.second == exp_error_sens1 );
       }
-      else if ( std::abs(game.pc_res_res - 0.9910) < 0.0002 ) {
-        second_best_norms.push_back(norm);
-        assert(norm.Rr.GProb(G, G, D) == 0.0);
+      else if (norm.Rr.GProb(G, G, D) == 0.0) {
+        assert( key.second == exp_error_sens2 );
       }
       else {
         throw std::runtime_error("unexpected cooperation level");
       }
     }
+  };
 
-    IC(best_norms.size(), second_best_norms.size());
-    assert(best_norms.size() == 256);
-    assert(second_best_norms.size() == 256);
+  check_norms(0, 1, 4.0, 5.0);
+  check_norms(1, 2, 4.0, 5.0);
+  check_norms(2, 2, 2.5, 3.0);
+  check_norms(3, 2, 7.0, 9.0);
+  check_norms(4, 3, 7.0, 9.0);
+  check_norms(5, 3, 4.0, 5.0);
+  check_norms(6, 2, 4.0, 5.0);
+  check_norms(7, 2, 7.0, 9.0);
+  check_norms(8, 3, 7.0, 9.0);
+  // map the values in norm_map to its size
+  std::map<key_type, int> size_map;
+  for (auto& kv : norm_map) {
+    size_map[kv.first] = kv.second.size();
   }
+  IC(size_map);
 }
 
 int main() {
