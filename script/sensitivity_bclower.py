@@ -42,6 +42,7 @@ dat
 # %%
 import matplotlib.cm as cm
 import matplotlib
+import matplotlib.patches as patches
 plt.clf()
 fig, ax = plt.subplots()
 colors = ['#084887', '#F58A07']
@@ -63,10 +64,17 @@ plt.arrow(0.5, 3.9, 0, -0.4, **arrow_opt)
 plt.text(2.3, 3.7, 'more robust\nagainst mutants', fontsize=12, horizontalalignment='center', verticalalignment='center')
 plt.text(2.8, 2.4, 'variants of L8', fontsize=14, verticalalignment='center', horizontalalignment='center', color=colors[0])
 plt.text(3.95, 1.05, 'L8', fontsize=14, verticalalignment='bottom', horizontalalignment='right', color=colors[0])
+#plt.text(2.45, 1.98, '*', fontsize=14, verticalalignment='bottom', horizontalalignment='right', color=colors[0])
 plt.text(7.0, 3.4, 'variants of S16', fontsize=14, verticalalignment='center', horizontalalignment='center', color='#BF5700')
 plt.text(6.92, 2.08, 'S16', fontsize=14, verticalalignment='bottom', horizontalalignment='right', color='#BF5700')
-# plt.annotate('L8', xy=(4, 1), xytext=(2.5, 0.5), color=colors[0], fontsize=14, arrowprops=dict(facecolor='#333333', shrinkB=500, width=0.3, headwidth=3, headlength=5, connectionstyle='arc3,rad=-0.3'))
+#plt.annotate('L8', xy=(4, 1), xytext=(4, 1.3), color=colors[0], fontsize=14, horizontalalignment='center', arrowprops=dict(facecolor='#333333', shrink=0.02, width=0.3, headwidth=3, headlength=5, connectionstyle='arc3,rad=-0.4'))
 # plt.annotate('S16', xy=(7, 2), xytext=(7.0, 1.5), color='#BF5700', fontsize=14, arrowprops=dict(facecolor='#333333', shrink=0.2, width=0.3, headwidth=3, headlength=5, connectionstyle='arc3,rad=-0.3'))
+
+poly = patches.Polygon([[1.8,2.3], [1.8,0.8], [5.5, 0.8], [5.5, 2.3]], linewidth=1, linestyle='--', edgecolor=colors[0], facecolor='none')
+ax.add_patch(poly)
+poly = patches.Polygon([[3.5,3.3], [3.5,2.7], [6, 2.7], [6, 1.7], [9.5, 1.7], [9.5, 3.3]], linewidth=1, linestyle='--', edgecolor=colors[1], facecolor='none')
+ax.add_patch(poly)
+
 plt.savefig('sensitivity_bclower.pdf')
 plt.show()
 
