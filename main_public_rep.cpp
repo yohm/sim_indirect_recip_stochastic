@@ -5,6 +5,7 @@
 #include <map>
 #include <random>
 #include <bitset>
+#include <regex>
 #include "Norm.hpp"
 #include "PublicRepGame.hpp"
 
@@ -17,11 +18,11 @@ std::tuple<bool,std::array<double,2>,double> CheckCESS(const Norm& norm, double 
   PublicRepGame game(mu_e, mu_a_donor, mu_a_recip, norm);
   auto brange = game.ESSBenefitRange();
   bool isCESS = game.pc_res_res > 0.98 && brange[0] < 10 && brange[0] + 0.001 < brange[1];
-  // IC(brange);
   return {isCESS, brange, game.h_star};
 }
 
-void FindLeadingEight() {
+// comprehensively enumerate deterministic norms without R_2, and find CESSs
+void FindLeadingEightSecondarySixteen() {
   size_t num = 0, num_passed = 0;
 
   for (int j = 0; j < 256; j++) {
@@ -40,6 +41,18 @@ void FindLeadingEight() {
         if (h_star < 0.5) {
           norm = norm.SwapGB();
         }
+        std::string name = norm.GetName();
+        // if name starts with "L"
+        if (name[0] == 'L') {
+          assert( std::abs(brange[0] - 1) < 0.01 );
+        }
+        else if (name[0] == 'S') {
+          assert( std::abs(brange[0] - 2) < 0.01 );
+        }
+        else {
+          throw std::runtime_error("unexpected norm");
+        }
+        assert( brange[1] > 10 );
         std::cerr << norm.Inspect();
         std::cerr << "brange: "  << brange[0] << " " << brange[1] << std::endl;
         num_passed++;
@@ -47,36 +60,70 @@ void FindLeadingEight() {
       num++;
     }
   }
+
+  assert(num_passed == 24);
+  assert(num == 2080);
   IC(num, num_passed);
 }
 
-std::string IdentifyType(const Norm& norm) {
+int IdentifyType(const Norm& norm) {
+  std::string pr1_name = norm.PR1_Name();
+  if (pr1_name.empty()) {
+    return -1;
+  }
   auto R1 = norm.Rd;
   auto R2 = norm.Rr;
   auto P = norm.P;
-  // P : [100*]
-  if ( P.CProb(G, G) == 1.0 && P.CProb(G, B) == 0.0 && P.CProb(B, G) == 0.0 ) {
-    if ( R2.GProb(G,G,C) == 1.0 && R2.GProb(G,B,D) == 1.0 && R2.GProb(B,G,D) == 1.0 ) {
-      if ( R1.GProb(G,B,D) == 1.0 && R1.GProb(B,G,D) == 0.0) {
-        return "P100_R2_111_R1_10";
-      }
-      else if ( R1.GProb(G,B,D) == 0.0 && R1.GProb(B,G,D) == 1.0) {
-        return "P100_R2_111_R1_01";
-      }
+
+  if (R2.GProb(G,G,C) != 1) {
+    return -1;
+  }
+
+  // if pr1_name matches regexp /^L[0-8]$/
+  std::regex re("^L[1-8]$");
+  if ( std::regex_match(pr1_name, re) ) {
+    if (R2.GProb(G,B,D) == 0 && R2.GProb(B,G,C) == 1 ) {
+      return 0;
+    }
+    else if (R2.GProb(G,B,D) == 1 && R2.GProb(B,G,C) == 0 ) {
+      return 1;
+    }
+    else if (R2.GProb(G,B,D) == 1 && R2.GProb(B,G,C) == 1 ) {
+      return 2;
     }
   }
-  // P : [101*]
-  if ( P.CProb(G, G) == 1.0 && P.CProb(G, B) == 0.0 && P.CProb(B, G) == 1.0 ) {
-    if (R2.GProb(G, G, C) == 1.0 && R2.GProb(G, B, D) == 1.0 && R2.GProb(B, G, C) == 1.0) {
-      return "P101_R2_111";
+  else if ( std::regex_match(pr1_name, std::regex("^S[0-9]+$")) ) {
+    if (R2.GProb(G,B,D) == 0 && R2.GProb(B,G,D) == 1 ) {
+      return 3;
+    }
+    else if (R2.GProb(G,B,D) == 1 && R2.GProb(B,G,D) == 0 ) {
+      return 4;
+    }
+    else if (R2.GProb(G,B,D) == 1 && R2.GProb(B,G,D) == 1 ) {
+      return 5;
     }
   }
-  return "other";
+  else if ( pr1_name == "L_prime" ) {
+    if (R2.GProb(G,B,D) == 1 && R2.GProb(B,G,C) == 1 ) {
+      return 6;
+    }
+  }
+  else if ( pr1_name == "S_prime" ) {
+    if (R2.GProb(G,B,D) == 1 && R2.GProb(B,G,D) == 1 ) {
+      return 7;
+    }
+  }
+  else if ( pr1_name == "S_prime_prime" ) {
+    if (R2.GProb(G,B,D) == 1 && R2.GProb(B,G,D) == 1 ) {
+      return 8;
+    }
+  }
+  return -1;
 }
 
-void EnumerateAllCESS() {
+void EnumerateAllDeterministicNorms() {
   size_t num = 0, num_passed = 0;
-  std::map< std::pair<std::string,int>, std::vector<int>> cess_norms;
+  std::map< int, std::vector<int>> cess_norms;
 
   for (int j = 0; j < 256; j++) {
     AssessmentRule R1 = AssessmentRule::MakeDeterministicRule(j);
@@ -95,16 +142,19 @@ void EnumerateAllCESS() {
           if (h_star < 0.5) {
             norm = norm.SwapGB();
           }
-          //std::cerr << norm.Inspect();
-          std::string similar_norm_name = norm.SimilarNorm();
-          if (similar_norm_name.empty()) {
-            similar_norm_name = IdentifyType(norm);
-          }
-          if (brange[1] < 100) {
-            throw std::runtime_error("brange[1] < 100");
-          }
-          cess_norms[std::make_pair(similar_norm_name,std::round(brange[0]))].push_back(norm.ID());
-          // std::cerr << "brange: "  << brange[0] << " " << brange[1] << std::endl;
+          int type = IdentifyType(norm);
+          // std::cerr << norm.Inspect(); IC(brange[0], brange[1], type);
+          assert( type >= 0 );
+          cess_norms[type].push_back(norm.ID());
+          if      (type == 0) { assert(std::abs(brange[0] - 1) < 0.03); }
+          else if (type == 1) { assert(std::abs(brange[0] - 2) < 0.03); }
+          else if (type == 2) { assert(std::abs(brange[0] - 2) < 0.03); }
+          else if (type == 3) { assert(std::abs(brange[0] - 2) < 0.03); }
+          else if (type == 4) { assert(std::abs(brange[0] - 3) < 0.03); }
+          else if (type == 5) { assert(std::abs(brange[0] - 3) < 0.03); }
+          else if (type == 6) { assert(std::abs(brange[0] - 2) < 0.03); }
+          else if (type == 7) { assert(std::abs(brange[0] - 2) < 0.03); }
+          else if (type == 8) { assert(std::abs(brange[0] - 3) < 0.03); }
           num_passed++;
         }
         num++;
@@ -113,14 +163,22 @@ void EnumerateAllCESS() {
   }
 
   IC(num, num_passed);
-  for (auto& kv : cess_norms) {
-    std::cerr << kv.first.first << " " << kv.first.second << " " << kv.second.size() << std::endl;
-    if (kv.first.first == "other") {
-      for (auto& v : kv.second) {
-        std::cerr << Norm::ConstructFromID(v).Inspect();
-        break;
-        // std::cerr << std::bitset<8>(v) << std::endl;
-      }
+  assert( num_passed == 2944 );
+
+  for (int i = 0; i < 9; i++) {
+    size_t s = cess_norms[i].size();
+    // std::cerr << i << " " << s << std::endl;
+    if (i >= 0 && i <= 2) {
+      assert(s == 256);
+    }
+    else if (i >= 3 && i <= 5) {
+      assert(s == 512);
+    }
+    else if (i == 6) {
+      assert(s == 128);
+    }
+    else if (i >= 7) {
+      assert(s == 256);
     }
   }
 }
@@ -693,13 +751,15 @@ void CESS_coop_classification() {
 }
 
 int main() {
-  // FindLeadingEight();
-  // EnumerateAllCESS();
+  FindLeadingEightSecondarySixteen();
+  std::cerr << "FindLeadingEightSecondarySixteen() done" << std::endl;
+  EnumerateAllDeterministicNorms();
+  std::cerr << "EnumerateAllDeterministicNorms() done" << std::endl;
   // StochasticVariantLeadingEight();
   // RandomCheckAnalyticNorms();
   // check_CESS_deterministic_norms();
   // CESS_cooperation_level_scaling();
-  CESS_coop_classification();
+  // CESS_coop_classification();
 
   return 0;
 }

@@ -185,7 +185,7 @@ void test_Norm() {
 
       Norm similar = l;
       similar.Rr.SetGProb(Reputation::G, Reputation::G, Action::C, 0.5);
-      assert(similar.SimilarNorm() == l.GetName());
+      assert(similar.PR1_Name() == l.GetName());
     }
   }
 

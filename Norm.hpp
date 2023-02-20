@@ -491,7 +491,7 @@ public:
         }
       }
     }
-    std::string s = SimilarNorm();
+    std::string s = PR1_Name();
     if (!s.empty()) {
       return "similar to " + s;
     }
@@ -513,7 +513,7 @@ public:
       throw std::runtime_error("Unknown norm");
     }
   }
-  std::string SimilarNorm() const {
+  std::string PR1_Name() const {  // return the name of {P,R1}
     // return the named norm that differs only in R2
     if (P.IsDeterministic() && Rd.IsDeterministic()) {
       int id = (Rd.ID() << 12) + P.ID();
@@ -522,6 +522,45 @@ public:
         if ((p.first & mask) == (id & mask)) {
           return p.second;
         }
+      }
+      constexpr Reputation G = Reputation::G, B = Reputation::B;
+      constexpr Action C = Action::C, D = Action::D;
+      if (  // L_prime
+          P.CProb(G,G) == 1.0 &&
+          P.CProb(G,B) == 0.0 &&
+          P.CProb(B,G) == 1.0 &&
+          Rd.GProb(G,G,C) == 1.0 &&
+          Rd.GProb(G,G,D) == 0.0 &&
+          Rd.GProb(G,B,C) == 0.0 &&
+          Rd.GProb(G,B,D) == 0.0 &&
+          Rd.GProb(B,G,C) == 1.0 &&
+          Rd.GProb(B,G,D) == 0.0
+          ) {
+        return "L_prime";
+      }
+      else if (  // S_prime
+          P.CProb(G,G) == 1.0 &&
+          P.CProb(G,B) == 0.0 &&
+          P.CProb(B,G) == 0.0 &&
+          Rd.GProb(G,G,C) == 1.0 &&
+          Rd.GProb(G,G,D) == 0.0 &&
+          Rd.GProb(G,B,D) == 1.0 &&
+          Rd.GProb(B,G,C) == 0.0 &&
+          Rd.GProb(B,G,D) == 0.0
+          ) {
+        return "S_prime";
+      }
+      else if (  // S_prime_prime
+          P.CProb(G,G) == 1.0 &&
+          P.CProb(G,B) == 0.0 &&
+          P.CProb(B,G) == 0.0 &&
+          Rd.GProb(G,G,C) == 1.0 &&
+          Rd.GProb(G,G,D) == 0.0 &&
+          Rd.GProb(G,B,C) == 0.0 &&
+          Rd.GProb(G,B,D) == 0.0 &&
+          Rd.GProb(B,G,D) == 1.0
+          ) {
+        return "S_prime_prime";
       }
     }
     return "";
