@@ -687,6 +687,8 @@ void check_CESS_deterministic_norms() {
       assert(close(brange[0], b_lower));
       assert(brange[1] > 1.0e2);
       assert(close(h_star, 1.0));
+      int type = IdentifyType(norm);
+      assert(type == cess_class);
     }
     std::cerr << "Passed CESS class " << cess_class << " with " << num_norms << " norms" << std::endl;
   };
@@ -703,35 +705,11 @@ void check_CESS_deterministic_norms() {
 
 }
 
-void CESS_cooperation_level_scaling() {
-  std::vector<Norm> all;
-  for (int i = 0; i <= 8; ++i) {
-    auto norms = CESS_deterministic_norms(i);
-    all.insert(all.end(), norms.begin(), norms.end());
-  }
-
-  std::vector<double> mu_array = {0.02, 0.01, 0.005, 0.002, 0.001, 0.0005, 0.0002, 0.0001};
-
-  for (double mu: mu_array) {
-    std::cout << mu << " ";
-    for (auto& norm : all) {
-      PublicRepGame game(mu, mu, mu, norm);
-      std::cout << game.pc_res_res << ' ';
-    }
-    std::cout << std::endl;
-  }
-
-}
-
 void CESS_coop_classification() {
   // conduct classification of the norms based on the cooperation level at mu=1e-3
 
   using key_type = std::pair<int,double>; // (b_c_lower, error_sensitivity)
   std::map<key_type, std::vector<Norm> > norm_map;
-
-  auto to_key = [](double b_c_lower, double error_sensitivity) {
-    // error sensitivity is rounded to the nearest 0.1
-  };
 
   auto check_norms = [&norm_map](int norm_class, int exp_b_lower, double exp_error_sens1, double exp_error_sens2) {
     double mu = 1.0e-4;
@@ -744,7 +722,6 @@ void CESS_coop_classification() {
       auto key = std::make_pair((int)std::round(bc_lower), error_sensitivity);
       norm_map[key].push_back(norm);
 
-      IC(norm_class, key);
       assert( key.first == exp_b_lower );
       if (norm.Rr.GProb(G, G, D) == 1.0) {
         assert( key.second == exp_error_sens1 );
@@ -784,9 +761,10 @@ int main() {
   std::cerr << "StochasticVariantLeadingEight() done" << std::endl;
   RandomCheckAnalyticNorms();
   std::cerr << "RandomCheckAnalyticNorms() done" << std::endl;
-  // check_CESS_deterministic_norms();
-  // CESS_cooperation_level_scaling();
-  // CESS_coop_classification();
+  check_CESS_deterministic_norms();
+  std::cerr << "check_CESS_deterministic_norms() done" << std::endl;
+  CESS_coop_classification();
+  std::cerr << "CESS_coop_classification() done" << std::endl;
 
   return 0;
 }
