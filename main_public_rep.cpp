@@ -220,15 +220,12 @@ std::array<double,2> AnalyticBenefitRange(const Norm& norm) {
     throw std::runtime_error("h_star is not 1");
   }
 
-  // P(G,G) = 1
-  if (P(G,G) == 1.0) {
-    // game.pc_res_res == 1 should be true
-  }
-  else {
+  // P(G,G) == 1
+  if (P(G,G) != 1.0) {
     throw std::runtime_error("P(G,G) is not 1");
   }
 
-  // P(G,B) = 0
+  // P(G,B) == 0
   if (P(G,B) != 0.0) {
     throw std::runtime_error("P(G,B) == 0 is necessary");
   }
@@ -428,6 +425,10 @@ void StochasticVariantLeadingEight() {
     auto brange1 = AnalyticBenefitRange(norm);
     auto brange2 = PublicRepGame(1.0e-6, 1.0e-6, 1.0e-6, norm).ESSBenefitRange();
     IC(brange1, brange2);
+
+    assert( std::abs(brange1[0] - 1) < 0.03 );
+    assert( std::abs(brange2[0] - 1) < 0.03 );
+    assert( brange1[1] > 10 && brange2[1] > 10 );
   }
 
   {
@@ -438,6 +439,10 @@ void StochasticVariantLeadingEight() {
     auto brange1 = AnalyticBenefitRange(norm);
     auto brange2 = PublicRepGame(1.0e-6, 1.0e-6, 1.0e-6, norm).ESSBenefitRange();
     IC(brange1, brange2);
+
+    assert( std::abs(brange1[0] - 1.2) < 0.03 );
+    assert( std::abs(brange2[0] - 1.2) < 0.03 );
+    assert( brange1[1] > 10 && brange2[1] > 10 );
   }
 }
 
@@ -446,15 +451,34 @@ bool CompareAnalyticNumericalBranges(const Norm& norm) {
   auto brange1 = AnalyticBenefitRange(norm);
   auto brange2 = PublicRepGame(1.0e-6, 1.0e-6, 1.0e-6, norm).ESSBenefitRange();
   IC(brange1, brange2);
-  double th = 3.0e-2;
-  if (brange1[0] > brange1[1]) {
-    return brange2[0] > brange2[1];
+
+  if (brange1[0] >= brange1[1]) {  // no ESS
+    return brange2[0] >= brange2[1];  // assert brange2 has no ESS too
   }
+
+  // we don't care about unrealistically large b/c
+  // it is susceptible to the numerical error
+  const double large_th = 10.0;
+  if (brange1[0] > large_th && brange2[0] > large_th) {
+    // both have no ESS
+    return true;
+  }
+  else if (brange1[0] > large_th && brange2[0] < large_th) {
+    return false;
+  }
+  else if (brange1[0] < large_th && brange2[0] > large_th) {
+    return false;
+  }
+
+  if (brange1[1] > large_th) { brange1[1] = large_th; }
+  if (brange2[1] > large_th) { brange2[1] = large_th; }
+
+  double th = 3.0e-2;
   return ( std::abs(brange1[0] - brange2[0]) < brange1[0]*th && std::abs(brange1[1] - brange2[1]) < brange1[1]*th );
 }
 
 void RandomCheckAnalyticNorms() {
-  size_t num_norms = 100000;
+  size_t num_norms = 100'000;
   std::mt19937_64 rng(123456789);
   std::uniform_real_distribution<double> dist(0.0, 1.0);
   auto r01 = [&rng,&dist]() -> double {
@@ -494,13 +518,14 @@ void RandomCheckAnalyticNorms() {
 
   }
 
-  std::cerr << "Number of unpassed: " << unpassed.size() << std::endl;
   for (auto& norm : unpassed) {
     bool b = CompareAnalyticNumericalBranges(norm);
     std::cerr << "-----------------------------------------------------------\n";
     std::cerr << PublicRepGame(1.0e-6, 1.0e-6, 1.0e-6, norm).Inspect();
     std::cerr << "-----------------------------------------------------------\n\n";
   }
+  std::cerr << "Number of unpassed: " << unpassed.size() << std::endl;
+  assert(unpassed.size() == 0);
 
 }
 
@@ -755,8 +780,10 @@ int main() {
   std::cerr << "FindLeadingEightSecondarySixteen() done" << std::endl;
   EnumerateAllDeterministicNorms();
   std::cerr << "EnumerateAllDeterministicNorms() done" << std::endl;
-  // StochasticVariantLeadingEight();
-  // RandomCheckAnalyticNorms();
+  StochasticVariantLeadingEight();
+  std::cerr << "StochasticVariantLeadingEight() done" << std::endl;
+  RandomCheckAnalyticNorms();
+  std::cerr << "RandomCheckAnalyticNorms() done" << std::endl;
   // check_CESS_deterministic_norms();
   // CESS_cooperation_level_scaling();
   // CESS_coop_classification();

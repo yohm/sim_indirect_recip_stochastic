@@ -29,13 +29,14 @@ public:
     for (int id = 0; id < 16; id++) {
       if (norm.P.ID() == id) continue;
       ActionRule mut = ActionRule::MakeDeterministicRule(id);
+      auto pc = MutantCooperationProbs(mut);
       auto b_range = StableBenefitRangeAgainstMutant(mut);
       ss << "Against mutant: ";
       ss << ((mut.CProb(Reputation::G, Reputation::G) == 1.0) ? "C" : "D");
       ss << ((mut.CProb(Reputation::G, Reputation::B) == 1.0) ? "C" : "D");
       ss << ((mut.CProb(Reputation::B, Reputation::G) == 1.0) ? "C" : "D");
       ss << ((mut.CProb(Reputation::B, Reputation::B) == 1.0) ? "C" : "D");
-      ss << " , it is stable for benefit range: " << b_range[0] << ' ' << b_range[1] << std::endl;
+      ss << " , benefit range: " << b_range[0] << ' ' << b_range[1] << " , (pc_res_mut,pc_mut_res): " << pc.first << ", " << pc.second << std::endl;
     }
     return ss.str();
   }
@@ -80,16 +81,10 @@ public:
     // C = R_1(B,B)+R_2(B,B)
     double c = R1_BB + R2_BB;
 
-    // IC(a,b,c);
-
-    const double tolerance = 1.0e-6;
-    if (a > tolerance) {
-      double h_star = (-b - std::sqrt(b*b - 4.0*a*c)) / (2.0*a);
-      double h_dot = a*h_star*h_star + b*h_star + c;
-      // IC(h_star, h_dot);
-      assert(h_dot < tolerance);
-      return h_star;
-    } else if (a < -tolerance) {
+    // Although analytic expression is available, it is numerically unstable when A is small.
+    // Use newton's method instead.
+    const double tolerance = 2.0e-3;
+    if (std::abs(a) > tolerance) {
       double h_star = (-b - std::sqrt(b*b - 4.0*a*c)) / (2.0*a);
       double h_dot = a*h_star*h_star + b*h_star + c;
       // IC(h_star, h_dot);
@@ -97,10 +92,19 @@ public:
       return h_star;
     }
     else {
-      double h_star = -c / b;
-      double h_dot = a*h_star*h_star + b*h_star + c;
-      assert(h_dot < tolerance);
-      return h_star;
+      // solve f(h) = ah^2 + bh + c = 0 by Newton's method
+      double h = -c / b;
+      if (h > 1.0) h = 1.0;
+      if (h < 0.0) h = 0.0;
+      double f = a*h*h + b*h + c;
+      double df = 2.0*a*h + b;
+      while (std::abs(f) > 1.0e-12) {
+        h -= f / df;
+        f = a*h*h + b*h + c;
+        df = 2.0*a*h + b;
+      }
+      // IC(h,f);
+      return h;
     }
   }
 
