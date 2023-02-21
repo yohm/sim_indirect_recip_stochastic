@@ -477,7 +477,7 @@ bool CompareAnalyticNumericalBranges(const Norm& norm) {
   return ( std::abs(brange1[0] - brange2[0]) < brange1[0]*th && std::abs(brange1[1] - brange2[1]) < brange1[1]*th );
 }
 
-void RandomCheckAnalyticNorms() {
+void RandomCheckStochasticNorms() {
   size_t num_norms = 100'000;
   std::mt19937_64 rng(123456789);
   std::uniform_real_distribution<double> dist(0.0, 1.0);
@@ -529,6 +529,72 @@ void RandomCheckAnalyticNorms() {
 
 }
 
+void RandomCheckSecondOrderStochasticNorms() {
+  size_t num_norms = 10'000;
+  std::mt19937_64 rng(9876543210);
+  std::uniform_real_distribution<double> dist(0.0, 1.0);
+  auto r01 = [&rng,&dist]() -> double {
+    return dist(rng);
+  };
+
+  for (size_t i = 0; i < num_norms; i++) {
+    std::array<Action, 4> actions = {C, D, C, D};
+
+    double r1gd = r01();  // R_1(-,G,D) < 1
+    double r1bc = r01();
+    double r1bd = r01();
+    double r2gd = r01();
+    double r2bc = r01();
+    double r2bd = r01();
+    std::array<double, 8> r1 = {
+        1.0, r1gd, // GG
+        r1bc, r1bd, // GB
+        1.0, r1gd, // BG
+        r1bc, r1bd  // BB
+    };
+    std::array<double, 8> r2 = {
+        1.0, r2gd, // GG
+        r2bc, r2bd, // GB
+        1.0, r2gd, // BG
+        r2bc, r2bd  // BB
+    };
+
+    // R_1(-,B,D) + R_2(-,B,D) > 0 is necessary
+    double recov = r1[3] + r2[3];
+    if (recov <= 1.0e-6) {
+      std::cerr << "does not satisfy recov > 0. continue." << std::endl;
+      continue;
+    }
+    if (1.0 - r1gd <= 1.0e-6) {
+      std::cerr << "does not satisfy R1(-,G,D) < 1. continue." << std::endl;
+      continue;
+    }
+
+    Norm norm = MakeNormFromTable(actions, r1, r2);
+    double bc_min = (1.0 + r2bd) / (1.0 - r1gd);
+    double bc_max = std::numeric_limits<double>::infinity();
+    if (r1bc > r1bd) {
+      bc_max = (1.0 + r2bd) / (r1bc - r1bd);
+    }
+    auto brange = AnalyticBenefitRange(norm);
+    bool b = CompareAnalyticNumericalBranges(norm);
+
+    if ( bc_min < 10 ) {
+      assert(brange[0] < 10);
+    }
+    else {
+      assert( std::abs(brange[0] - bc_min) < 1.0e-6 );
+    }
+    if ( bc_max > 10 ) {
+      assert(brange[1] > 10);
+    }
+    else {
+      assert( std::abs(brange[1] - bc_max) < 1.0e-6 );
+    }
+
+    IC(bc_min, bc_max, brange);
+  }
+}
 std::vector<Norm> CESS_deterministic_norms(int c) {
   constexpr Reputation G = Reputation::G, B = Reputation::B;
   constexpr Action C = Action::C, D = Action::D;
@@ -758,14 +824,17 @@ void CESS_coop_classification() {
 }
 
 int main() {
+
   FindLeadingEightSecondarySixteen();
   std::cerr << "FindLeadingEightSecondarySixteen() done" << std::endl;
   EnumerateAllDeterministicNorms();
   std::cerr << "EnumerateAllDeterministicNorms() done" << std::endl;
   StochasticVariantLeadingEight();
   std::cerr << "StochasticVariantLeadingEight() done" << std::endl;
-  RandomCheckAnalyticNorms();
-  std::cerr << "RandomCheckAnalyticNorms() done" << std::endl;
+  RandomCheckStochasticNorms();
+  std::cerr << "RandomCheckStochasticNorms() done" << std::endl;
+  RandomCheckSecondOrderStochasticNorms();
+  std::cerr << "RandomCheckSecondOrderStochasticNorms() done" << std::endl;
   check_CESS_deterministic_norms();
   std::cerr << "check_CESS_deterministic_norms() done" << std::endl;
   CESS_coop_classification();
