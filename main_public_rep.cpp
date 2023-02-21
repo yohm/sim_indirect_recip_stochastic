@@ -674,9 +674,10 @@ void check_CESS_deterministic_norms() {
     return std::abs(a - b) < 0.05;
   };
 
-  auto assert_CESS = [&close](int cess_class, int num_norms, double b_lower) {
+  auto assert_CESS = [&close](int cess_class, int num_norms, double b_lower, int num_second_oder) {
     auto norms = CESS_deterministic_norms(cess_class);
     assert(norms.size() == num_norms);
+    std::vector<Norm> second_order_norms;
     for (auto& norm : norms) {
       auto [isCESS, brange, h_star] = CheckCESS(norm);
       if (!isCESS) {
@@ -689,19 +690,23 @@ void check_CESS_deterministic_norms() {
       assert(close(h_star, 1.0));
       int type = IdentifyType(norm);
       assert(type == cess_class);
+      if ( norm.IsSecondOrder() ) {
+        second_order_norms.push_back(norm);
+      }
     }
+    assert(second_order_norms.size() == num_second_oder);
     std::cerr << "Passed CESS class " << cess_class << " with " << num_norms << " norms" << std::endl;
   };
 
-  assert_CESS(0, 256, 1.0);
-  assert_CESS(1, 256, 2.0);
-  assert_CESS(2, 256, 2.0);
-  assert_CESS(3, 512, 2.0);
-  assert_CESS(4, 512, 3.0);
-  assert_CESS(5, 512, 3.0);
-  assert_CESS(6, 128, 2.0);
-  assert_CESS(7, 256, 2.0);
-  assert_CESS(8, 256, 3.0);
+  assert_CESS(0, 256, 1.0, 8);
+  assert_CESS(1, 256, 2.0, 0);
+  assert_CESS(2, 256, 2.0, 8);
+  assert_CESS(3, 512, 2.0, 0);
+  assert_CESS(4, 512, 3.0, 0);
+  assert_CESS(5, 512, 3.0, 0);
+  assert_CESS(6, 128, 2.0, 4);
+  assert_CESS(7, 256, 2.0, 0);
+  assert_CESS(8, 256, 3.0, 0);
 
 }
 
