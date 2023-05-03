@@ -37,7 +37,7 @@ r2_bbd_e = (1 - mu_a2) * r2_bbd + mu_a2 * (1 - r2_bbd)
 r2_ggc_e
 
 # %%
-sympy.diff(r1_ggc_e, mu_a1)
+# sympy.diff(r1_ggc_e, mu_a1)
 # %%
 r1_bar_gg = p_gg_e * r1_ggc_e + (1 - p_gg_e) * r1_ggd_e
 r1_bar_gb = p_gb_e * r1_gbc_e + (1 - p_gb_e) * r1_gbd_e
@@ -52,7 +52,9 @@ r2_bar_bb = p_bb_e * r2_bbc_e + (1 - p_bb_e) * r2_bbd_e
 r2_bar_gg
 # %%
 mu = sympy.symbols('\mu', positive=True)
-r1_bar_gg.subs(mu_e, mu).subs(mu_a1, mu).subs(mu_a2, mu).diff(mu).subs(mu, 0)
+
+#%%
+#r1_bar_gg.subs(mu_e, mu).subs(mu_a1, mu).subs(mu_a2, mu).diff(mu).subs(mu, 0)
 # %%
 A = r1_bar_gg + r2_bar_gg - r1_bar_gb - r2_bar_gb - r1_bar_bg - r2_bar_bg + r1_bar_bb + r2_bar_bb
 A
@@ -113,6 +115,14 @@ def subs_recip_keep_r2(equation):
   ans = ans.subs(r2_bbd, 0)
   return ans
 
+#%%
+def subs_third_r2(equation, r2_ggd_value=1):
+  ans = equation.subs( r2_ggc,  1)
+  ans = ans.subs(r2_ggd, r2_ggd_value)
+  ans = ans.subs(r2_gbd, 1)
+  ans = ans.subs(r2_bgc, 1)
+  return ans
+
 # %%
 def subs_l8_common(equation):
   # substitution of leading eight common prescription
@@ -127,13 +137,22 @@ def subs_l8_common(equation):
   return ans
 
 # %%
-subs_recip_keep_r2( dpc_dmu ).subs(r1_ggd, 0).subs(p_gb, 0).subs(r1_gbd, 1).subs(p_bg, 1).subs(r1_bgd, 0).subs(r1_bgc, 1).subs(mu, 0).simplify()
-#subs_recip_keep_r2( subs_l8_common(dpc_dmu) ).limit(mu, 0)
-#subs_l8_common( subs_recip_keep_r2( dpc_dmu ) ).subs(mu, 0)
+# for the leading eight norms, sensitivity ~ 2*mu_e + mu_a1 + mu_a2
+subs_l8_common( subs_recip_keep_r2( pc ) ).subs(mu_a1,0).subs(mu_a2,0).diff(mu_e).subs(mu_e, 0).simplify()   #=> -2
 # %%
-subs_l8_common(dpc_dmu).subs(r2_ggd, 1).subs(r2_gbd, 1).subs(r2_bgc, 1).subs(mu, 0).simplify()   # => -5/2
+subs_l8_common( subs_recip_keep_r2( pc ) ).subs(mu_e,0).subs(mu_a2,0).diff(mu_a1).subs(mu_a1, 0).simplify()   #=> -1
 # %%
-subs_l8_common(dpc_dmu).subs(r2_ggd, 0).subs(r2_gbd, 1).subs(r2_bgc, 1).subs(mu, 0).simplify()   # => -3
+subs_l8_common( subs_recip_keep_r2( pc ) ).subs(mu_e,0).subs(mu_a1,0).diff(mu_a2).subs(mu_a2, 0).simplify()   #=> -1
+
+# %%
+subs_l8_common( subs_recip_keep_r2( pc ) ).subs(mu_e,mu).subs(mu_a1,mu).subs(mu_a2,mu).diff(mu).subs(mu, 0).simplify()  #=> -4
+
+# %%
+subs_third_r2( subs_l8_common(pc), 1).subs(mu_e,mu).subs(mu_a1,mu).subs(mu_a2,mu).diff(mu).subs(mu, 0).simplify()  #=> -5/2 (-3/2 mu_e - 1/2 mu_a1 - 1/2 mu_a2)
+# %%
+subs_third_r2( subs_l8_common(pc), 0).subs(mu_e,mu).subs(mu_a1,mu).subs(mu_a2,mu).diff(mu).subs(mu, 0).simplify()  #=> -3  (-2 mu_e - 1/2 mu_a1 - 1/2 mu_a2)
+
+
 # %%
 def subs_norm(equation, norm):
   # format of list
@@ -171,13 +190,3 @@ l1_norm = [
 
 # %%
 subs_norm( dpc_dmu, l1_norm).limit(mu, 0)
-
-# %%
-# alternative calculation of dpc/dmu
-dh_dmu_2 = (-Bprime+1/(2*A+B)*(B*Bprime-2*Aprime*C-2*A*Cprime))/(2*A) + Aprime/A
-dpc_dmu_2 = dh_dmu_2 * (2-p_bg) -1
-dpc_dmu_2
-dh_dmu_2
-# %%
-subs_norm( dh_dmu_2, l1_norm).subs(mu_e, mu).subs(mu_a1, mu).subs(mu_a2, mu).limit(mu, 0)
-# %%
