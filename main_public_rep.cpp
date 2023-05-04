@@ -21,6 +21,40 @@ std::tuple<bool,std::array<double,2>,double> CheckCESS(const Norm& norm, double 
   return {isCESS, brange, game.h_star};
 }
 
+bool CheckErrorSensitivity(const Norm& norm, double mu = 1.0e-6) {
+  // check error sensitivity of norms
+  // for each norm, compute the error sensitivity
+  // and check that it is consistent with the theoretical prediction
+
+  PublicRepGame game(mu, mu, mu, norm);
+  double error_sensitivity = (1.0 - game.pc_res_res) / mu;
+  double chi = 0.0;
+
+  if (norm.P.CProb(B,G) == 1.0) {
+    double denom = norm.Rd.GProb(G,B,D) + norm.Rr.GProb(G,B,D)
+        + norm.Rd.GProb(B,G,C) + norm.Rr.GProb(B,G,C) - 2.0;
+    chi = 1.0 / denom;
+  }
+  else if (norm.P.CProb(B, G) == 0.0) {
+    double denom = norm.Rd.GProb(G,B,D) + norm.Rr.GProb(G,B,D)
+        + norm.Rd.GProb(B,G,D) + norm.Rr.GProb(B,G,D) - 2.0;
+    chi = 2.0 / denom;
+  }
+  else {
+    throw std::runtime_error("invalid norm");
+  }
+
+  double impl = 1.0 + (2.0 - norm.Rd.GProb(G,G,D) - norm.Rr.GProb(G,G,D)) * chi;
+  double expected_sensitivity = impl + 2 * chi;
+
+  IC(chi, error_sensitivity, expected_sensitivity);
+  if (std::abs(error_sensitivity - expected_sensitivity)/expected_sensitivity > 0.01 ) {
+    std::cerr << "Error sensitivity check failed: " << norm.Inspect() << std::endl;
+    return false;
+  }
+  return true;
+}
+
 // comprehensively enumerate deterministic norms without R_2, and find CESSs
 void FindLeadingEightSecondarySixteen() {
   size_t num = 0, num_passed = 0;
@@ -155,6 +189,7 @@ void EnumerateAllDeterministicNorms() {
           else if (type == 6) { assert(std::abs(brange[0] - 2) < 0.03); }
           else if (type == 7) { assert(std::abs(brange[0] - 2) < 0.03); }
           else if (type == 8) { assert(std::abs(brange[0] - 3) < 0.03); }
+          assert( CheckErrorSensitivity(norm) );
           num_passed++;
         }
         num++;
@@ -429,6 +464,8 @@ void StochasticVariantLeadingEight() {
     assert( std::abs(brange1[0] - 1) < 0.03 );
     assert( std::abs(brange2[0] - 1) < 0.03 );
     assert( brange1[1] > 10 && brange2[1] > 10 );
+
+    assert( CheckErrorSensitivity(norm) );
   }
 
   {
@@ -443,6 +480,8 @@ void StochasticVariantLeadingEight() {
     assert( std::abs(brange1[0] - 1.2) < 0.03 );
     assert( std::abs(brange2[0] - 1.2) < 0.03 );
     assert( brange1[1] > 10 && brange2[1] > 10 );
+
+    assert( CheckErrorSensitivity(norm) );
   }
 }
 
@@ -485,7 +524,7 @@ void RandomCheckStochasticNorms() {
     return dist(rng);
   };
 
-  std::vector<Norm> unpassed;
+  std::vector<Norm> unpassed, unpassed2;
   for (size_t i = 0; i < num_norms; i++) {
     std::cerr << std::endl << "i: " << i << std::endl;
     Action P_bg = (rng() % 2 == 0) ? C : D;
@@ -513,19 +552,30 @@ void RandomCheckStochasticNorms() {
     bool b = CompareAnalyticNumericalBranges(norm);
     if (!b) {
       unpassed.push_back(norm);
-      // throw std::runtime_error("Failed");
+    }
+    if (recov > 2.05) {  // when recov is sufficiently greater than the threshold,
+      bool b2 = CheckErrorSensitivity(norm);
+      if (!b2) {
+        unpassed2.push_back(norm);
+      }
     }
 
   }
 
-  for (auto& norm : unpassed) {
+  for (const auto& norm : unpassed) {
     bool b = CompareAnalyticNumericalBranges(norm);
     std::cerr << "-----------------------------------------------------------\n";
     std::cerr << PublicRepGame(1.0e-6, 1.0e-6, 1.0e-6, norm).Inspect();
     std::cerr << "-----------------------------------------------------------\n\n";
   }
-  std::cerr << "Number of unpassed: " << unpassed.size() << std::endl;
+  for (const auto& norm: unpassed2) {
+    std::cerr << "-----------------------------------------------------------\n";
+    CheckErrorSensitivity(norm);
+    std::cerr << "-----------------------------------------------------------\n\n";
+  }
+  std::cerr << "Number of unpassed & unpassed2: " << unpassed.size() << ' ' << unpassed2.size() << std::endl;
   assert(unpassed.size() == 0);
+  assert(unpassed2.size() == 0);
 
 }
 
@@ -593,6 +643,8 @@ void RandomCheckSecondOrderStochasticNorms() {
     }
 
     IC(bc_min, bc_max, brange);
+
+    assert(CheckErrorSensitivity(norm) );
   }
 }
 std::vector<Norm> CESS_deterministic_norms(int c) {
@@ -824,6 +876,8 @@ void CESS_coop_classification() {
 }
 
 int main() {
+
+  assert( CheckErrorSensitivity(Norm::L1()) );
 
   FindLeadingEightSecondarySixteen();
   std::cerr << "FindLeadingEightSecondarySixteen() done" << std::endl;
