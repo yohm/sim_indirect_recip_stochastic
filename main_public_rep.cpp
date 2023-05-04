@@ -599,7 +599,7 @@ std::vector<Norm> CESS_deterministic_norms(int c) {
   constexpr Reputation G = Reputation::G, B = Reputation::B;
   constexpr Action C = Action::C, D = Action::D;
   std::vector<Norm> ans;
-  auto leading_eight = std::vector{Norm::L1(), Norm::L2(), Norm::L3(), Norm::L4(), Norm::L5(), Norm::L6(), Norm::L7(), Norm::L8()};
+  auto leading_eight = std::vector<Norm>{Norm::L1(), Norm::L2(), Norm::L3(), Norm::L4(), Norm::L5(), Norm::L6(), Norm::L7(), Norm::L8()};
   auto secondary_sixteen = std::vector<Norm>();
   for (int i = 1; i <= 16; ++i) {
     secondary_sixteen.push_back(Norm::SecondarySixteen(i));
