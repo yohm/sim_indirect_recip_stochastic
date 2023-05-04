@@ -49,7 +49,7 @@ r2_bar_gg = p_gg_e * r2_ggc_e + (1 - p_gg_e) * r2_ggd_e
 r2_bar_gb = p_gb_e * r2_gbc_e + (1 - p_gb_e) * r2_gbd_e
 r2_bar_bg = p_bg_e * r2_bgc_e + (1 - p_bg_e) * r2_bgd_e
 r2_bar_bb = p_bb_e * r2_bbc_e + (1 - p_bb_e) * r2_bbd_e
-r2_bar_gg
+r2_bar_bb
 # %%
 mu = sympy.symbols('\mu', positive=True)
 
@@ -98,8 +98,20 @@ assumptions
 
 # %%
 with sympy.assuming(assumptions):
-  dpc_dmu = pc.subs(r1_ggc, 1).subs(r2_ggc, 1).subs(p_gg, 1).subs(p_gb, 0).subs(mu_e, mu).subs(mu_a1, mu).subs(mu_a2, mu).diff(mu)
+  dpc_dmu = pc.subs(r1_ggc, 1).subs(r2_ggc, 1).subs(p_gg, 1).subs(p_gb, 0).subs(p_bg, 1).subs(mu_e, 0).subs(mu_a1, 0).subs(mu_a2, mu).diff(mu).subs(mu, 0)
+  # dpc_dmu = pc.subs(r1_ggc, 1).subs(r2_ggc, 1).subs(p_gg, 1).subs(p_gb, 0).subs(mu_e, mu).subs(mu_a1, mu).subs(mu_a2, mu).diff(mu)
 dpc_dmu
+
+# %%
+assump1 = sympy.And(
+  r1_gbd + r2_gbd + r1_bgc + r2_bgc > 2,
+  r1_ggd < 1,
+  r1_bgc > r1_bgd
+)
+# this does not finish in reasonable time
+# with sympy.assuming(assump1):
+#   simplified = dpc_dmu.simplify()
+# simplified
 
 
 
