@@ -26,8 +26,6 @@ bool CheckErrorSensitivity(const Norm& norm, double mu = 1.0e-6) {
   // for each norm, compute the error sensitivity
   // and check that it is consistent with the theoretical prediction
 
-  PublicRepGame game(mu, mu, mu, norm);
-  double error_sensitivity = (1.0 - game.pc_res_res) / mu;
   double chi = 0.0;
 
   if (norm.P.CProb(B,G) == 1.0) {
@@ -47,11 +45,41 @@ bool CheckErrorSensitivity(const Norm& norm, double mu = 1.0e-6) {
   double impl = 1.0 + (2.0 - norm.Rd.GProb(G,G,D) - norm.Rr.GProb(G,G,D)) * chi;
   double expected_sensitivity = impl + 2 * chi;
 
+  PublicRepGame game(mu, mu, mu, norm);
+  double error_sensitivity = (1.0 - game.pc_res_res) / mu;
+
   IC(chi, error_sensitivity, expected_sensitivity);
   if (std::abs(error_sensitivity - expected_sensitivity)/expected_sensitivity > 0.01 ) {
     std::cerr << "Error sensitivity check failed: " << norm.Inspect() << std::endl;
     return false;
   }
+
+  {  // check for independent terms
+    PublicRepGame game1(0, mu, 0, norm);
+    double error_sensitivity_a1 = (1.0 - game1.pc_res_res) / mu;
+    IC(chi, error_sensitivity_a1);
+    if (std::abs(error_sensitivity_a1 - chi)/chi > 0.01 ) {
+      std::cerr << "Error sensitivity check failed: " << norm.Inspect() << std::endl;
+      return false;
+    }
+
+    PublicRepGame game2(0, 0, mu, norm);
+    double error_sensitivity_a2 = (1.0 - game2.pc_res_res) / mu;
+    IC(chi, error_sensitivity_a2);
+    if (std::abs(error_sensitivity_a2 - chi)/chi > 0.01 ) {
+      std::cerr << "Error sensitivity check failed: " << norm.Inspect() << std::endl;
+      return false;
+    }
+
+    PublicRepGame game3(mu, 0, 0, norm);
+    double error_sensitivity_e = (1.0 - game3.pc_res_res) / mu;
+    IC(chi, error_sensitivity_e);
+    if (std::abs(error_sensitivity_e - impl)/impl > 0.01 ) {
+      std::cerr << "Error sensitivity check failed: " << norm.Inspect() << std::endl;
+      return false;
+    }
+  }
+
   return true;
 }
 
