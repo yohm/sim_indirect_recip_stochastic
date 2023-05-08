@@ -82,8 +82,8 @@ plt.ylim(0.0, 4)
 plt.xticks([0,2,4,6])
 plt.yticks([1, 2, 3])
 
-arrow_opt = dict(width=0.05, head_length=0.07, alpha=0.6, fc='gray', ec='gray')
-arrow_opt2 = dict(width=0.05, head_width=0.12, head_length=0.12, alpha=0.6, fc='gray', ec='gray')
+arrow_opt = dict(width=0.02, head_length=0.07, alpha=0.6, fc='gray', ec='gray')
+arrow_opt2 = dict(width=0.02, head_width=0.05, head_length=0.09, alpha=0.6, fc='gray', ec='gray')
 ax.arrow(0.7, 0.1, -0.07, 0, transform=ax.transAxes, **arrow_opt)
 ax.text(0.83, 0.1, 'more robust\nagainst errors', transform=ax.transAxes,
          fontsize=12, horizontalalignment='center', verticalalignment='center')
