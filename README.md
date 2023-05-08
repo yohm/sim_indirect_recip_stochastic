@@ -1,6 +1,6 @@
 # Indirect Reciprocity with Stochastic Reputation
 
-The source code for the manuscript "Indirect Reciprocity with Stochastic Reputation" by Yohsuke Murase and Christian Hilbe.
+The source code for the manuscript "Indirect Reciprocity with Stochastic and Dual Reputation Updates" by Yohsuke Murase and Christian Hilbe.
 
 ## Build
 
